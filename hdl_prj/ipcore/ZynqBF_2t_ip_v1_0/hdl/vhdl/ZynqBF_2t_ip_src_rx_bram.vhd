@@ -27,12 +27,11 @@ ENTITY ZynqBF_2t_ip_src_rx_bram IS
         din_i                             :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
         din_q                             :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
         we                                :   IN    std_logic;
-        re                                :   IN    std_logic;
+        wr_addr                           :   IN    std_logic_vector(14 downto 0);
         rd_addr                           :   IN    std_logic_vector(14 DOWNTO 0);  -- ufix15
-        rst                               :   IN    std_logic;
-        dout                              :   OUT   vector_of_std_logic_vector16(0 TO 1);  -- sfix16_En15 [2]
-        valid                             :   OUT   std_logic;
-        addr_out                          :   OUT   std_logic_vector(14 DOWNTO 0)  -- ufix15
+        shift                             :   IN    std_logic_vector(5 downto 0);
+        dout_i                            :   OUT   vector_of_std_logic_vector16(0 TO 63);  -- rx i data for the correlators
+        dout_q                            :   OUT   vector_of_std_logic_vector16(0 TO 63)   -- rx q data for the correlators
         );
 END ZynqBF_2t_ip_src_rx_bram;
 
@@ -40,219 +39,151 @@ END ZynqBF_2t_ip_src_rx_bram;
 ARCHITECTURE rtl OF ZynqBF_2t_ip_src_rx_bram IS
 
   -- Component Declarations
-  COMPONENT ZynqBF_2t_ip_src_SimpleDualPortRAM_generic
-    GENERIC( AddrWidth                    : integer;
-             DataWidth                    : integer
-             );
-    PORT( clk                             :   IN    std_logic;
-          ram_rst                         :   IN    std_logic;
-          enb                             :   IN    std_logic;
-          wr_din                          :   IN    std_logic_vector(DataWidth - 1 DOWNTO 0);  -- generic width
-          wr_addr                         :   IN    std_logic_vector(AddrWidth - 1 DOWNTO 0);  -- generic width
-          wr_en                           :   IN    std_logic;
-          rd_addr                         :   IN    std_logic_vector(AddrWidth - 1 DOWNTO 0);  -- generic width
-          rd_dout                         :   OUT   std_logic_vector(DataWidth - 1 DOWNTO 0)  -- generic width
-          );
+  COMPONENT rx_ram_core
+    PORT (
+      clka : IN STD_LOGIC;
+      wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
+      addra : IN STD_LOGIC_VECTOR(13 DOWNTO 0);
+      dina : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+      douta : OUT STD_LOGIC_VECTOR(511 DOWNTO 0);
+      clkb : IN STD_LOGIC;
+      enb : IN STD_LOGIC;
+      web : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
+      addrb : IN STD_LOGIC_VECTOR(13 DOWNTO 0);
+      dinb : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+      doutb : OUT STD_LOGIC_VECTOR(511 DOWNTO 0)
+    );
   END COMPONENT;
 
-  -- Component Configuration Statements
-  FOR ALL : ZynqBF_2t_ip_src_SimpleDualPortRAM_generic
-    USE ENTITY work.ZynqBF_2t_ip_src_SimpleDualPortRAM_generic(rtl);
-
   -- Signals
-  SIGNAL din_i_signed                     : signed(15 DOWNTO 0);  -- sfix16_En15
-  SIGNAL Delay3_out1                      : signed(15 DOWNTO 0);  -- sfix16_En15
-  SIGNAL Delay1_out1                      : std_logic;
-  SIGNAL HDL_Counter_out1                 : unsigned(14 DOWNTO 0);  -- ufix15
-  SIGNAL rd_addr_unsigned                 : unsigned(14 DOWNTO 0);  -- ufix15
-  SIGNAL rd_addr_1                        : unsigned(14 DOWNTO 0);  -- ufix15
-  SIGNAL rx_ram_i_out1                    : std_logic_vector(15 DOWNTO 0);  -- ufix16
-  SIGNAL rx_ram_i_out1_signed             : signed(15 DOWNTO 0);  -- sfix16_En15
-  SIGNAL Delay6_out1                      : signed(15 DOWNTO 0);  -- sfix16_En15
-  SIGNAL din_q_signed                     : signed(15 DOWNTO 0);  -- sfix16_En15
-  SIGNAL Delay4_out1                      : signed(15 DOWNTO 0);  -- sfix16_En15
-  SIGNAL rx_ram_q_out1                    : std_logic_vector(15 DOWNTO 0);  -- ufix16
-  SIGNAL rx_ram_q_out1_signed             : signed(15 DOWNTO 0);  -- sfix16_En15
-  SIGNAL Delay7_out1                      : signed(15 DOWNTO 0);  -- sfix16_En15
-  SIGNAL Vector_Concatenate_out1          : vector_of_signed16(0 TO 1);  -- sfix16_En15 [2]
-  SIGNAL Delay5_reg                       : std_logic_vector(0 TO 3);  -- ufix1 [4]
-  SIGNAL Delay5_out1                      : std_logic;
-  SIGNAL reduced_reg                      : vector_of_unsigned15(0 TO 2);  -- ufix15 [3]
-  SIGNAL rd_addr_2                        : unsigned(14 DOWNTO 0);  -- ufix15
+  
+  signal we_d1                            : std_logic;
+  signal we1, we2                         : std_logic_vector(0 downto 0);       -- to comply with Xilinx IP core RAM
+  signal wr_addr_cnt                      : unsigned(14 DOWNTO 0);              -- wr address counter that counts up to 32,768
+  signal wr_addr_i                        : std_logic_vector(13 DOWNTO 0);      -- wr address for each of the 2 RAMs - RAM1 is written to when bit 6 is 0, RAM2 is written to when bit 6 is 1
+  signal rd_addr_i                        : std_logic_vector(13 DOWNTO 0);      -- rd address for each of the 2 RAMs - RAM1 is read from when bit 6 is 0, RAM2 is read from when bit 6 is 1
+  signal douta_i1, doutb_i1               : std_logic_vector(511 downto 0);
+  signal douta_i2, doutb_i2               : std_logic_vector(511 downto 0);
+  signal douta_q1, doutb_q1               : std_logic_vector(511 downto 0);
+  signal douta_q2, doutb_q2               : std_logic_vector(511 downto 0);
+  signal addra, addrb                     : std_logic_vector(13 downto 0);
+  constant sw_bit                         : integer range 0 to 13 := 6;
+  
+  signal shift_i                          : integer range 0 to 63;
 
 BEGIN
-  u_rx_ram_i : ZynqBF_2t_ip_src_SimpleDualPortRAM_generic
-    GENERIC MAP( AddrWidth => 15,
-                 DataWidth => 16
-                 )
-    PORT MAP( clk => clk,
-              ram_rst => rst,
-              enb => enb,
-              wr_din => std_logic_vector(Delay3_out1),
-              wr_addr => std_logic_vector(HDL_Counter_out1),
-              wr_en => Delay1_out1,
-              rd_addr => std_logic_vector(rd_addr_1),
-              rd_dout => rx_ram_i_out1
-              );
 
-  u_rx_ram_q : ZynqBF_2t_ip_src_SimpleDualPortRAM_generic
-    GENERIC MAP( AddrWidth => 15,
-                 DataWidth => 16
-                 )
-    PORT MAP( clk => clk,
-              ram_rst => rst,
-              enb => enb,
-              wr_din => std_logic_vector(Delay4_out1),
-              wr_addr => std_logic_vector(HDL_Counter_out1),
-              wr_en => Delay1_out1,
-              rd_addr => std_logic_vector(rd_addr_1),
-              rd_dout => rx_ram_q_out1
-              );
+  shift_i <= to_integer(unsigned(shift));
 
-  din_i_signed <= signed(din_i);
+  we1(0) <= not wr_addr(sw_bit) and we; --we_d1;
+  we2(0) <=     wr_addr(sw_bit) and we; --we_d1;
+  
+  wr_addr_i <= std_logic_vector(wr_addr(14 downto (sw_bit+1))) & std_logic_vector(wr_addr((sw_bit-1) downto 0));
+  rd_addr_i <= std_logic_vector(rd_addr(14 downto (sw_bit+1))) & std_logic_vector(rd_addr((sw_bit-1) downto 0));
+  
+  addra <= wr_addr_i when we = '1' else rd_addr_i;
+  addrb <= std_logic_vector(unsigned(addra) + to_unsigned(64,addrb'length));
+  
+  rxi_ram1 : rx_ram_core
+  PORT MAP (
+    clka => clk,
+    wea => std_logic_vector(we1),
+    addra => addra,
+    dina => din_i,
+    douta => douta_i1,
+    clkb => clk,
+    enb => '1',
+    web => "0",
+    addrb => addrb,
+    dinb => x"0000",
+    doutb => doutb_i1
+  );
+  
+  rxi_ram2 : rx_ram_core
+  PORT MAP (
+    clka => clk,
+    wea => std_logic_vector(we2),
+    addra => addra,
+    dina => din_i,
+    douta => douta_i2,
+    clkb => clk,
+    enb => '1',
+    web => "0",
+    addrb => addrb,
+    dinb => x"0000",
+    doutb => doutb_i2
+  );
+  
+  rxq_ram1 : rx_ram_core
+  PORT MAP (
+    clka => clk,
+    wea => std_logic_vector(we1),
+    addra => addra,
+    dina => din_i,
+    douta => douta_q1,
+    clkb => clk,
+    enb => '1',
+    web => "0",
+    addrb => addrb,
+    dinb => x"0000",
+    doutb => doutb_q1
+  );
+  
+  rxq_ram2 : rx_ram_core
+  PORT MAP (
+    clka => clk,
+    wea => std_logic_vector(we2),
+    addra => addra,
+    dina => din_i,
+    douta => douta_q2,
+    clkb => clk,
+    enb => '1',
+    web => "0",
+    addrb => addrb,
+    dinb => x"0000",
+    doutb => doutb_q2
+  );
 
-  Delay3_process : PROCESS (clk)
-  BEGIN
-    IF clk'EVENT AND clk = '1' THEN
-      IF reset = '1' THEN
-        Delay3_out1 <= to_signed(16#0000#, 16);
-      ELSIF enb = '1' THEN
-        Delay3_out1 <= din_i_signed;
-      END IF;
-    END IF;
-  END PROCESS Delay3_process;
-
-
-  Delay1_process : PROCESS (clk)
-  BEGIN
-    IF clk'EVENT AND clk = '1' THEN
-      IF reset = '1' THEN
-        Delay1_out1 <= '0';
-      ELSIF enb = '1' THEN
-        Delay1_out1 <= we;
-      END IF;
-    END IF;
-  END PROCESS Delay1_process;
-
-
-  -- Count limited, Unsigned Counter
-  --  initial value   = 1
-  --  step value      = 1
-  --  count to value  = 32767
-  HDL_Counter_process : PROCESS (clk)
-  BEGIN
-    IF clk'EVENT AND clk = '1' THEN
-      IF reset = '1' THEN
-        HDL_Counter_out1 <= to_unsigned(16#0001#, 15);
-      ELSIF enb = '1' THEN
-        IF rst = '1' THEN 
-          HDL_Counter_out1 <= to_unsigned(16#0001#, 15);
-        ELSIF Delay1_out1 = '1' THEN 
-          IF HDL_Counter_out1 = to_unsigned(16#7FFF#, 15) THEN 
-            HDL_Counter_out1 <= to_unsigned(16#0001#, 15);
-          ELSE 
-            HDL_Counter_out1 <= HDL_Counter_out1 + to_unsigned(16#0001#, 15);
-          END IF;
-        END IF;
-      END IF;
-    END IF;
-  END PROCESS HDL_Counter_process;
-
-
-  rd_addr_unsigned <= unsigned(rd_addr);
-
-  reduced_process : PROCESS (clk)
-  BEGIN
-    IF clk'EVENT AND clk = '1' THEN
-      IF reset = '1' THEN
-        rd_addr_1 <= to_unsigned(16#0000#, 15);
-      ELSIF enb = '1' THEN
-        rd_addr_1 <= rd_addr_unsigned;
-      END IF;
-    END IF;
-  END PROCESS reduced_process;
-
-
-  rx_ram_i_out1_signed <= signed(rx_ram_i_out1);
-
-  Delay6_process : PROCESS (clk)
-  BEGIN
-    IF clk'EVENT AND clk = '1' THEN
-      IF reset = '1' THEN
-        Delay6_out1 <= to_signed(16#0000#, 16);
-      ELSIF enb = '1' THEN
-        Delay6_out1 <= rx_ram_i_out1_signed;
-      END IF;
-    END IF;
-  END PROCESS Delay6_process;
-
-
-  din_q_signed <= signed(din_q);
-
-  Delay4_process : PROCESS (clk)
-  BEGIN
-    IF clk'EVENT AND clk = '1' THEN
-      IF reset = '1' THEN
-        Delay4_out1 <= to_signed(16#0000#, 16);
-      ELSIF enb = '1' THEN
-        Delay4_out1 <= din_q_signed;
-      END IF;
-    END IF;
-  END PROCESS Delay4_process;
-
-
-  rx_ram_q_out1_signed <= signed(rx_ram_q_out1);
-
-  Delay7_process : PROCESS (clk)
-  BEGIN
-    IF clk'EVENT AND clk = '1' THEN
-      IF reset = '1' THEN
-        Delay7_out1 <= to_signed(16#0000#, 16);
-      ELSIF enb = '1' THEN
-        Delay7_out1 <= rx_ram_q_out1_signed;
-      END IF;
-    END IF;
-  END PROCESS Delay7_process;
-
-
-  Vector_Concatenate_out1(0) <= Delay6_out1;
-  Vector_Concatenate_out1(1) <= Delay7_out1;
-
-  outputgen: FOR k IN 0 TO 1 GENERATE
-    dout(k) <= std_logic_vector(Vector_Concatenate_out1(k));
-  END GENERATE;
-
-  Delay5_process : PROCESS (clk)
-  BEGIN
-    IF clk'EVENT AND clk = '1' THEN
-      IF reset = '1' THEN
-        Delay5_reg <= (OTHERS => '0');
-      ELSIF enb = '1' THEN
-        Delay5_reg(0) <= re;
-        Delay5_reg(1 TO 3) <= Delay5_reg(0 TO 2);
-      END IF;
-    END IF;
-  END PROCESS Delay5_process;
-
-  Delay5_out1 <= Delay5_reg(3);
-
-  reduced_1_process : PROCESS (clk)
-  BEGIN
-    IF clk'EVENT AND clk = '1' THEN
-      IF reset = '1' THEN
-        reduced_reg <= (OTHERS => to_unsigned(16#0000#, 15));
-      ELSIF enb = '1' THEN
-        reduced_reg(0) <= rd_addr_1;
-        reduced_reg(1 TO 2) <= reduced_reg(0 TO 1);
-      END IF;
-    END IF;
-  END PROCESS reduced_1_process;
-
-  rd_addr_2 <= reduced_reg(2);
-
-  addr_out <= std_logic_vector(rd_addr_2);
-
-  valid <= Delay5_out1;
+  
+  we_delay_process : process(clk)
+  begin
+    if clk'event and clk = '1' then
+        if reset = '1' then
+            we_d1 <= '0';
+        elsif enb = '1' then
+            we_d1 <= we;
+        end if;
+    end if;
+  end process;
+  
+  -- outputs to correlator
+  register_outputs : process(clk)
+  begin
+    if clk'event and clk = '1' then
+      if reset = '1' then
+        dout_i <= (others => (others => '0'));
+        dout_q <= (others => (others => '0'));
+      elsif enb = '1' then
+        for i in 0 to 31 loop
+          if i < shift_i then
+            dout_i(i) <= doutb_i1((15+16*i) downto (16*i));
+            dout_q(i) <= doutb_q1((15+16*i) downto (16*i));
+          else
+            dout_i(i) <= douta_i1((15+16*i) downto (16*i));
+            dout_q(i) <= douta_q1((15+16*i) downto (16*i));
+          end if;
+          if (i+32) < shift_i then
+            dout_i(i+32) <= doutb_i2((15+16*i) downto (16*i));
+            dout_q(i+32) <= doutb_q2((15+16*i) downto (16*i));
+          else
+            dout_i(i+32) <= douta_i2((15+16*i) downto (16*i));
+            dout_q(i+32) <= douta_q2((15+16*i) downto (16*i));
+          end if;
+        end loop;
+      end if;
+    end if;
+  end process;
+            
 
 END rtl;
 

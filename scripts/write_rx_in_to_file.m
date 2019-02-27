@@ -4,6 +4,8 @@ else
     load('./data/GenGoldSeq_4k.mat');
 end
 
+load(fullfile('data', 'GenGoldSeq_4k.mat'));
+
 %% Arrange rx inputs
 rxi = [zeros(10,1); 0];
 

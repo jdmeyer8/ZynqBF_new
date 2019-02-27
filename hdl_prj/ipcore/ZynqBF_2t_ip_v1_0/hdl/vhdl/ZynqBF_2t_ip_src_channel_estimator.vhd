@@ -51,6 +51,24 @@ END ZynqBF_2t_ip_src_channel_estimator;
 ARCHITECTURE rtl OF ZynqBF_2t_ip_src_channel_estimator IS
 
   -- Component Declarations
+  COMPONENT ZynqBF_2t_ip_src_correlators
+    GENERIC( NCORR                        :   integer := 2);
+    PORT( clk                             :   IN    std_logic;
+          reset                           :   IN    std_logic;
+          enb                             :   IN    std_logic;
+          rst                             :   IN    std_logic;
+          din_i                           :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15 [2]
+          din_q                           :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15 [2]
+          vin                             :   IN    std_logic;                      -- rx ram write enable
+          est_en                          :   IN    std_logic;
+          index                           :   OUT   std_logic_vector(14 DOWNTO 0);  -- ufix15
+          step                            :   OUT   std_logic;
+          peak_found                      :   OUT   std_logic;
+          est_val                         :   OUT   std_logic;                      -- valid signal for ch_est input
+          probe                           :   OUT   std_logic_vector(31 DOWNTO 0)  -- sfix32_En16
+          );
+  END COMPONENT;
+  
   COMPONENT ZynqBF_2t_ip_src_goldSequences
     PORT( clk                             :   IN    std_logic;
           reset                           :   IN    std_logic;
@@ -156,21 +174,25 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_channel_estimator IS
           );
   END COMPONENT;
 
-  COMPONENT ZynqBF_2t_ip_src_rx_bram
-    PORT( clk                             :   IN    std_logic;
-          reset                           :   IN    std_logic;
-          enb                             :   IN    std_logic;
-          din_i                           :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-          din_q                           :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-          we                              :   IN    std_logic;
-          re                              :   IN    std_logic;
-          rd_addr                         :   IN    std_logic_vector(14 DOWNTO 0);  -- ufix15
-          rst                             :   IN    std_logic;
-          dout                            :   OUT   vector_of_std_logic_vector16(0 TO 1);  -- sfix16_En15 [2]
-          valid                           :   OUT   std_logic;
-          addr_out                        :   OUT   std_logic_vector(14 DOWNTO 0)  -- ufix15
-          );
-  END COMPONENT;
+  -- COMPONENT ZynqBF_2t_ip_src_rx_bram
+    -- PORT( clk                             :   IN    std_logic;
+          -- reset                           :   IN    std_logic;
+          -- enb                             :   IN    std_logic;
+          -- din_i                           :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
+          -- din_q                           :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
+          -- we                              :   IN    std_logic;
+          -- re                              :   IN    std_logic;
+          -- rd_addr                         :   IN    std_logic_vector(14 DOWNTO 0);  -- ufix15
+          -- rst                             :   IN    std_logic;
+          -- -- dout                            :   OUT   vector_of_std_logic_vector16(0 TO 1);  -- sfix16_En15 [2]
+          -- dcorr_i                         :   OUT   vector_of_std_logic_vector16(0 to 64);
+          -- dcorr_q                         :   OUT   vector_of_std_logic_vector16(0 to 64);
+          -- dest_i                          :   OUT   std_logic_vector(15 downto 0);
+          -- dest_q                          :   OUT   std_logic_vector(15 downto 0);
+          -- valid                           :   OUT   std_logic;
+          -- addr_out                        :   OUT   std_logic_vector(14 DOWNTO 0)  -- ufix15
+          -- );
+  -- END COMPONENT;
 
   COMPONENT ZynqBF_2t_ip_src_ch_est
     PORT( clk                             :   IN    std_logic;
@@ -215,7 +237,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_channel_estimator IS
   END COMPONENT;
           
 
-  -- Component Configuration Statements
+  -- Component Configuration Statements  
   FOR ALL : ZynqBF_2t_ip_src_goldSequences
     USE ENTITY work.ZynqBF_2t_ip_src_goldSequences(rtl);
 
@@ -237,8 +259,8 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_channel_estimator IS
   FOR ALL : ZynqBF_2t_ip_src_in_fifo
     USE ENTITY work.ZynqBF_2t_ip_src_in_fifo(rtl);
 
-  FOR ALL : ZynqBF_2t_ip_src_rx_bram
-    USE ENTITY work.ZynqBF_2t_ip_src_rx_bram(rtl);
+  -- FOR ALL : ZynqBF_2t_ip_src_rx_bram
+    -- USE ENTITY work.ZynqBF_2t_ip_src_rx_bram(rtl);
 
   FOR ALL : ZynqBF_2t_ip_src_ch_est
     USE ENTITY work.ZynqBF_2t_ip_src_ch_est(rtl);
@@ -306,6 +328,22 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_channel_estimator IS
   signal ch2q_200:                          std_logic_vector(15 downto 0);
 
 BEGIN
+  
+  u_correlators : entity work.ZynqBF_2t_ip_src_correlators(rtl)
+    PORT MAP( clk => clk200,
+              reset => reset200,
+              enb => enb200,
+              rst => rst_en,
+              din_i => fifo_rxi,
+              din_q => fifo_rxq,
+              vin => fifo_rxv,
+              est_en => est_en,
+              index => open,
+              step => open,
+              peak_found => open,
+              probe => open
+              );
+              
   u_goldSequences : ZynqBF_2t_ip_src_goldSequences
     PORT MAP( clk => clk200,
               reset => reset200,
@@ -431,21 +469,25 @@ BEGIN
               empty => in_fifo_out4
               );
 
-  u_rx_bram : ZynqBF_2t_ip_src_rx_bram
-    PORT MAP( clk => clk200,
-              reset => reset200,
-              enb => enb200,
-              din_i => fifo_rxi,  -- sfix16_En15
-              din_q => fifo_rxq,  -- sfix16_En15
-              -- we => fifo_rxv,
-              we => rx_bram_we,
-              re => ram_re,
-              rd_addr => rx_addr,  -- ufix15
-              rst => est_done,
-              dout => ram_dout,  -- sfix16_En15 [2]
-              valid => ram_valid,
-              addr_out => rx_bram_out3  -- ufix15
-              );
+  -- u_rx_bram : ZynqBF_2t_ip_src_rx_bram
+    -- PORT MAP( clk => clk200,
+              -- reset => reset200,
+              -- enb => enb200,
+              -- din_i => fifo_rxi,  -- sfix16_En15
+              -- din_q => fifo_rxq,  -- sfix16_En15
+              -- -- we => fifo_rxv,
+              -- we => rx_bram_we,
+              -- re => ram_re,
+              -- rd_addr => rx_addr,  -- ufix15
+              -- rst => est_done,
+              -- -- dout => ram_dout,  -- sfix16_En15 [2]
+              -- dcorr_i => open,
+              -- dcorr_q => open,
+              -- dest_i => open,
+              -- dest_q => open,
+              -- valid => ram_valid,
+              -- addr_out => rx_bram_out3  -- ufix15
+              -- );
 
   u_ch_est : ZynqBF_2t_ip_src_ch_est
     PORT MAP( clk => clk200,

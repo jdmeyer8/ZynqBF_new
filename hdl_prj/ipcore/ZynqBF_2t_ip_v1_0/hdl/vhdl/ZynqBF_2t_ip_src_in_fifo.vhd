@@ -65,19 +65,26 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_in_fifo IS
   
   signal rden_dreg                        : std_logic_vector(1 downto 0); -- read enable delay register
   
-BEGIN
+  signal fifo_din, fifo_dout              : std_logic_vector(31 downto 0);
   
-  u_rx_i_fifo : FIFO_DUALCLOCK_MACRO
-  generic map(data_width => 16)
+BEGIN
+
+  fifo_din <= rxi_in & rxq_in;
+  
+  rxi_out <= fifo_dout(31 downto 16);
+  rxq_out <= fifo_dout(15 downto 0);
+  
+  u_rx_fifo : FIFO_DUALCLOCK_MACRO
+  generic map(data_width => 32)
   port map(
     rst => reset,
     wrclk => clk,
     wren => wren,
-    di => rxi_in,
+    di => fifo_din,
     full => open,
     rdclk => clk200,
     rden => rden,
-    do => rxi_out,
+    do => fifo_dout,
     empty => empty_rxi,
     almostempty => open,
     almostfull => open,
@@ -87,25 +94,25 @@ BEGIN
     rdcount => open
   );
     
-  u_rx_q_fifo : FIFO_DUALCLOCK_MACRO
-  generic map(data_width => 16)
-  port map(
-    rst => reset,
-    wrclk => clk,
-    wren => wren,
-    di => rxi_in,
-    full => open,
-    rdclk => clk200,
-    rden => rden,
-    do => rxq_out,
-    empty => empty_rxq,
-    almostempty => open,
-    almostfull => open,
-    wrerr => open,
-    rderr => open,
-    wrcount => open,
-    rdcount => open
-  );
+  -- u_rx_q_fifo : FIFO_DUALCLOCK_MACRO
+  -- generic map(data_width => 16)
+  -- port map(
+    -- rst => reset,
+    -- wrclk => clk,
+    -- wren => wren,
+    -- di => rxi_in,
+    -- full => open,
+    -- rdclk => clk200,
+    -- rden => rden,
+    -- do => rxq_out,
+    -- empty => empty_rxq,
+    -- almostempty => open,
+    -- almostfull => open,
+    -- wrerr => open,
+    -- rderr => open,
+    -- wrcount => open,
+    -- rdcount => open
+  -- );
   
   
   -- Write side signals
