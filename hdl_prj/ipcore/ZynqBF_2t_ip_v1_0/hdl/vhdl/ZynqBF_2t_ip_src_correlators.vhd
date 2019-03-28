@@ -116,11 +116,14 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   port( clk                               :   IN    std_logic;
         reset                             :   IN    std_logic;
         enb                               :   IN    std_logic;
+        start                             :   IN    std_logic;
         en                                :   IN    std_logic;  -- enable for MACC
         rxi                               :   IN    vector_of_std_logic_vector16(0 TO 63);  -- rx i data for the correlators
         rxq                               :   IN    vector_of_std_logic_vector16(0 TO 63);  -- rx q data for the correlators
         gsi                               :   IN    vector_of_std_logic_vector16(0 TO (64*N-1));  -- gs i data for the correlators
-        gsq                               :   IN    vector_of_std_logic_vector16(0 TO (64*N-1))   -- gs q data for the correlators
+        gsq                               :   IN    vector_of_std_logic_vector16(0 TO (64*N-1));  -- gs q data for the correlators
+        done                              :   OUT   std_logic;
+        dout                              :   OUT   vector_of_std_logic_vector32(0 TO (N-1))
         );
   end component;
         
@@ -166,7 +169,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   SIGNAL Compare_To_Constant1_out1        : std_logic;
   SIGNAL Logical_Operator7_out1           : std_logic;
   SIGNAL peak_fsm_out2                    : std_logic;
-  SIGNAL update_index                     : std_logic;
+  -- SIGNAL update_index                     : std_logic;
   SIGNAL running_max_out2                 : std_logic_vector(31 DOWNTO 0);  -- ufix32
   SIGNAL stored_index                     : std_logic_vector(15 DOWNTO 0);  -- ufix16
   SIGNAL stored_index_signed              : signed(15 DOWNTO 0);  -- int16
@@ -190,7 +193,8 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   signal inc_rx_ram_wraddr                : std_logic;                      -- flag to increment the rx ram wr addr
   
   signal corr_start                       : std_logic;
-  signal corr_done                        : std_logic;
+  signal corr_start_dreg                  : std_logic_vector(2 downto 0);   -- 3 stage delay register for corr start signal
+  signal corr_start_d3                    : std_logic;
   signal corr_en                          : std_logic;
   signal corr_en_d3                       : std_logic;
   signal corr_en_dreg                     : std_logic_vector(2 downto 0);   -- 3 stage delay register for corr en signal
@@ -205,10 +209,40 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   signal corr_cnt                         : unsigned(11 downto 0);          -- correlation counter (and address for gs ram, address offset for rx ram)
   signal corr_base                        : unsigned(14 downto 0);          -- correlation base address for rx ram
 
+  signal corr_done                        : std_logic;
+  signal corr_dout                        : vector_of_std_logic_vector32(0 to (NCORR-1));
+  
+  -- peak tracking fsm/
+  -- signal cs_ptrack                        : std_logic_vector(2 downto 0);
+  signal cs_ptrack                        : vector_of_std_logic_vector3(0 to (NCORR-1));
+  constant s_wait                         : std_logic_vector(2 downto 0) := "001";
+  constant s_track                        : std_logic_vector(2 downto 0) := "010";
+  constant s_finish                       : std_logic_vector(2 downto 0) := "100";
+  
+  signal ptrack_ind                       : integer range 0 to (NCORR-1);   -- index of which correlator has a peak detected
+  signal ptrack_addr_in                   : unsigned(14 downto 0);
+  signal ptrack_start                     : unsigned(0 to (NCORR-1));
+  signal ptrack_cnt                       : vector_of_unsigned8(0 to (NCORR-1));
+  constant PTRACK_CNT_END                 : unsigned(7 downto 0) := x"20";  -- look for peak across 20 samples
+  
+  signal ram_index                        : std_logic_vector(14 downto 0);
+  signal update_est_index                 : std_logic_vector(0 to (NCORR-1));
+  signal est_index_start                  : vector_of_std_logic_vector15(0 to (NCORR-1));
+  
+  signal corr_threshold                   : vector_of_std_logic_vector32(0 to (NCORR-1));
+  constant corr_thresh_const              : vector_of_std_logic_vector32(0 to (NCORR-1)) := (others => x"00640000");
+  
+  signal main_fsm                         : vector_of_std_logic_vector4(0 to (NCORR-1));
+  constant s_peakdetect                   : std_logic_vector(3 downto 0) := "0001";
+  constant s_channelest                   : std_logic_vector(3 downto 0) := "0010";
+  constant s_reset                        : std_logic_vector(3 downto 0) := "0100";
+  
 BEGIN
 
   gsi <= gsdata;
   gsq <= gsdata;
+  corr_threshold <= corr_thresh_const;
+  ram_index <= std_logic_vector(unsigned(rx_ram_wraddr) - to_unsigned(16#1000#, 14));
 
   u_rx_bram : ZynqBF_2t_ip_src_rx_bram
     PORT MAP( clk => clk,
@@ -253,11 +287,14 @@ BEGIN
     PORT MAP( clk => clk,
               reset => reset,
               enb => enb,
+              start => corr_start_d3,
               en => corr_en_d3,
               rxi => rxi_shifted,
               rxq => rxq_shifted,
               gsi => gsi,
-              gsq => gsq
+              gsq => gsq,
+              done => corr_done,
+              dout => corr_dout
               );
 
   u_peak_fsm : ZynqBF_2t_ip_src_peak_fsm
@@ -270,16 +307,19 @@ BEGIN
               peak_found => peak_fsm_out2
               );
 
-  u_running_max : ZynqBF_2t_ip_src_running_max
-    PORT MAP( clk => clk,
-              reset => reset,
-              enb => enb,
-              din => std_logic_vector(Delay4_out1),  -- sfix32_En16
-              en => peak_fsm_out1,
-              rst => peak_fsm_out2,
-              new_max => update_index,
-              max_val => running_max_out2  -- sfix32_En16
-              );
+              
+  gen_running_max: for i in 0 to (NCORR-1) generate
+    u_running_max_i : ZynqBF_2t_ip_src_running_max
+        PORT MAP( clk => clk,
+                reset => reset,
+                enb => enb,
+                din => corr_dout(i),  -- sfix32_En16
+                en => cs_ptrack(i)(1),
+                rst => cs_ptrack(i)(2),
+                new_max => update_est_index(i),
+                max_val => open  -- sfix32_En16
+                );
+  end generate;
 
   vin_delay_process : process(clk)
   begin
@@ -329,13 +369,26 @@ BEGIN
     end if;
   end process;
   
+  corr_start_delay : process(clk)
+  begin
+    if clk'event and clk = '1' then
+        if reset = '1' then
+            corr_start_dreg <= (others => '0');
+        elsif enb = '1' then
+            corr_start_dreg <= corr_start_dreg(corr_start_dreg'high-1 downto 0) & corr_start;
+        end if;
+    end if;
+  end process;
+  
+  corr_start_d3 <= corr_start_dreg(2);
+  
   corr_en_delay_process : process(clk)
   begin
     if clk'event and clk = '1' then
         if reset = '1' then
-            corr_en_dreg <= "000";
+            corr_en_dreg <= (others => '0');
         elsif enb = '1' then
-            corr_en_dreg <= corr_en_dreg(1 downto 0) & corr_en;
+            corr_en_dreg <= corr_en_dreg(corr_en_dreg'high-1 downto 0) & corr_en;
         end if;
     end if;
   end process;
@@ -367,9 +420,99 @@ BEGIN
     end if;
   end process;
   
-  corr_done <= '1' when corr_cnt(11 downto 6) = 63 else '0';
+  --corr_done <= '1' when corr_cnt(11 downto 6) = 63 else '0';
   gs_ram_rdaddr <= std_logic_vector(corr_cnt(11 downto 6));
   rx_ram_rdaddr <= std_logic_vector(corr_cnt + corr_base);
+  
+  detect_threshold_crossing : process(clk)
+  begin
+    if clk'event and clk = '1' then
+        if reset = '1' then
+            ptrack_start <= (others => '0');
+            ptrack_ind <= 0;
+        elsif enb = '1' then 
+            for i in 0 to (NCORR-1) loop
+                if cs_ptrack(i) = s_wait then
+                    if signed(corr_dout(i)) >= signed(corr_threshold(i)) then
+                        ptrack_start(i) <= '1';
+                    else
+                        ptrack_start(i) <= '0';
+                    end if;
+                else
+                    ptrack_start(i) <= '0';
+                end if;
+            end loop;
+        end if;
+    end if;
+  end process;
+  
+  peak_tracking_fsm : process(clk)
+  begin
+    if clk'event and clk = '1' then
+        if reset = '1' then
+            for i in 0 to (NCORR-1) loop
+                cs_ptrack(i) <= s_wait;
+            end loop;
+        elsif enb = '1' then
+            for i in 0 to (NCORR-1) loop
+                case cs_ptrack(i) is
+                    when s_wait =>
+                        if ptrack_start(i) = '1' then
+                            cs_ptrack(i) <= s_track;
+                        else
+                            cs_ptrack(i) <= s_wait;
+                        end if;
+                    when s_track =>
+                        if ptrack_cnt(i) >= PTRACK_CNT_END and corr_done = '1' then
+                            cs_ptrack(i) <= s_finish;
+                        else
+                            cs_ptrack(i) <= s_track;
+                        end if;
+                    when s_finish =>
+                        cs_ptrack(i) <= s_wait;
+                    when others =>
+                        cs_ptrack(i) <= s_wait;
+                end case;
+            end loop;
+        end if;
+    end if;
+  end process;
+  
+  peak_track_counter : process(clk)
+  begin
+    if clk'event and clk = '1' then
+        if reset = '1' then
+            for i in 0 to (NCORR-1) loop
+                ptrack_cnt(i) <= x"00";
+            end loop;
+        elsif enb = '1' then 
+            for i in 0 to (NCORR-1) loop 
+                if cs_ptrack(i) = s_track then
+                    if corr_done = '1' then
+                        ptrack_cnt(i) <= ptrack_cnt(i) + 1;
+                    end if;
+                else
+                    ptrack_cnt(i) <= x"00";
+                end if;
+            end loop;
+        end if;
+    end if;
+  end process;
+  
+  index_of_max_corr : process(clk)
+  begin
+    if clk'event and clk = '1' then
+        if reset = '1' then
+            est_index_start <= (others => (others => '0'));
+        elsif enb = '1' then
+            for i in 0 to (NCORR-1) loop
+                if update_est_index(i) = '1' then
+                    est_index_start(i) <= ram_index;
+                end if;
+            end loop;
+        end if;
+    end if;
+  end process;
 
   Delay9_process : PROCESS (clk)
   BEGIN

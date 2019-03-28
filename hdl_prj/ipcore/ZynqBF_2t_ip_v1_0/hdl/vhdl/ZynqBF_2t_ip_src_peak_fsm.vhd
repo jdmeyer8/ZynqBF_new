@@ -65,7 +65,7 @@ BEGIN
         HDL_Counter_out1 <= to_unsigned(16#00#, 8);
       ELSIF enb = '1' THEN
         IF Logical_Operator1_out1 = '1' THEN 
-          IF HDL_Counter_out1 >= to_unsigned(16#03#, 8) THEN 
+          IF HDL_Counter_out1 >= to_unsigned(16#02#, 8) THEN 
             HDL_Counter_out1 <= to_unsigned(16#00#, 8);
           ELSE 
             HDL_Counter_out1 <= HDL_Counter_out1 + to_unsigned(16#01#, 8);

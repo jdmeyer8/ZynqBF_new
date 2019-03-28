@@ -50,7 +50,7 @@ BEGIN
       din_signed;
 
   
-  reset_max_out1 <= store_max_out1 WHEN rst = '0' ELSE
+  reset_max_out1 <= store_max_out1 WHEN en = '1' ELSE
       to_signed(0, 32);
 
   Delay4_process : PROCESS (clk)

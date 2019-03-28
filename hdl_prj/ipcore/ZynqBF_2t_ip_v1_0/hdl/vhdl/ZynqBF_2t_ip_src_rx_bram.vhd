@@ -67,7 +67,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_rx_bram IS
   signal douta_q1, doutb_q1               : std_logic_vector(511 downto 0);
   signal douta_q2, doutb_q2               : std_logic_vector(511 downto 0);
   signal addra, addrb                     : std_logic_vector(13 downto 0);
-  constant sw_bit                         : integer range 0 to 13 := 6;
+  constant sw_bit                         : integer range 0 to 13 := 5;
   
   signal shift_i                          : integer range 0 to 63;
 

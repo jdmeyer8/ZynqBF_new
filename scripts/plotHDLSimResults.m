@@ -1,9 +1,11 @@
-%% Extract data from sim_results.txt
-if strcmp(computer, 'PCWIN64')
-    fname = '.\hdl_prj\vivado_ip_prj\vivado_prj.sim\sim_2\behav\xsim\sim_results.txt';
-else
-    fname = './hdl_prj/vivado_ip_prj/vivado_prj.sim/sim_2/behav/xsim/sim_results.txt';
-end
+% %% Extract data from sim_results.txt
+% if strcmp(computer, 'PCWIN64')
+%     fname = '.\hdl_prj\vivado_ip_prj\vivado_prj.sim\sim_2\behav\xsim\sim_results.txt';
+% else
+%     fname = './hdl_prj/vivado_ip_prj/vivado_prj.sim/sim_2/behav/xsim/sim_results.txt';
+% end
+
+fname = fullfile('hdl_prj','vivado_ip_prj','vivado_prj.sim','sim_2','behav','xsim','sim_results.txt');
 % data_in = readResults(fname);
 data_in = csvread(fname);
 
@@ -44,37 +46,37 @@ c7 = c(7,:);
 % xmin = 4e-3;
 xmin = min(t);
 
-subplot(311); hold all;
-plot(t(1:pstep:end),fpga_state(1:pstep:end), '-', 'color', c1);
-set(gca, 'fontsize', 10);
-title('FPGA State', 'fontweight', 'bold', 'fontsize', 16);
-xlabel('Time [s]', 'fontsize', 14);
-% ylabel('Enabled/Disabled', 'fontweight', 'bold', 'fontsize', 12);
-set(gca,'ytick', [1 2 3]);
-set(gca,'yticklabel',{'Peak Detect', 'Estimate Channel', 'Reset'});
-set(gca,'xlim', [xmin max(t)]);
-% leg = legend('Peak Detect', 'Estimate Channel', 'location', 'west');
-% leg.FontSize = 12;
+% subplot(311); hold all;
+% plot(t(1:pstep:end),fpga_state(1:pstep:end), '-', 'color', c1);
+% set(gca, 'fontsize', 10);
+% title('FPGA State', 'fontweight', 'bold', 'fontsize', 16);
+% xlabel('Time [s]', 'fontsize', 14);
+% % ylabel('Enabled/Disabled', 'fontweight', 'bold', 'fontsize', 12);
+% set(gca,'ytick', [1 2 3]);
+% set(gca,'yticklabel',{'Peak Detect', 'Estimate Channel', 'Reset'});
+% set(gca,'xlim', [xmin max(t)]);
+% % leg = legend('Peak Detect', 'Estimate Channel', 'location', 'west');
+% % leg.FontSize = 12;
 
-subplot(312); hold all;
-plot(t(1:pstep:end),corr_ch1(1:pstep:end),'-', 'color', c3);
-plot(t(1:pstep:end),corr_ch2(1:pstep:end),'-', 'color', c4);
+subplot(211); hold all;
+plot(t(1:pstep:end),corr_ch1(1:pstep:end),'-', 'linewidth', 2, 'color', c3);
+plot(t(1:pstep:end),corr_ch2(1:pstep:end),'-', 'linewidth', 2, 'color', c4);
 set(gca,'xlim', [xmin max(t)]);
 set(gca, 'fontsize', 10);
-title('Gold Sequence Correlators', 'fontweight', 'bold', 'fontsize', 16);
+title('Correlators', 'fontweight', 'bold', 'fontsize', 16);
 xlabel('Time [s]', 'fontsize', 14);
 ylabel('Xcorr [a.u.]', 'fontsize', 14);
 leg = legend('Channel 1', 'Channel 2', 'location', 'northwest');
 leg.FontSize = 12;
 
-subplot(313); hold all;
-plot(t(1:pstep:end),ch1_i(1:pstep:end),'-', 'color', c6);
-plot(t(1:pstep:end),ch1_q(1:pstep:end),'--', 'color', c6);
-plot(t(1:pstep:end),ch2_i(1:pstep:end),'-', 'color', c2);
-plot(t(1:pstep:end),ch2_q(1:pstep:end),'--', 'color', c2);
+subplot(212); hold all;
+plot(t(1:pstep:end),ch1_i(1:pstep:end),'-', 'linewidth', 2, 'color', c6);
+plot(t(1:pstep:end),ch1_q(1:pstep:end),'--', 'linewidth', 2, 'color', c6);
+plot(t(1:pstep:end),ch2_i(1:pstep:end),'-', 'linewidth', 2, 'color', c2);
+plot(t(1:pstep:end),ch2_q(1:pstep:end),'--', 'linewidth', 2, 'color', c2);
 set(gca,'xlim', [xmin max(t)]);
 set(gca, 'fontsize', 10);
-title('Channel 1 CSI', 'fontweight', 'bold', 'fontsize', 16);
+title('CSI Estimates', 'fontweight', 'bold', 'fontsize', 16);
 xlabel('Time [s]', 'fontsize', 14);
 ylabel('CSI [a.u.]', 'fontsize', 14);
 leg = legend('Ch1 i', 'Ch1 q', 'Ch2 i', 'Ch2 q', 'location', 'west');

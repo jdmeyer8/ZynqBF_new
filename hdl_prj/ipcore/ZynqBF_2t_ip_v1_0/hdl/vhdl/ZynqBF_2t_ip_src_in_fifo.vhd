@@ -85,7 +85,7 @@ BEGIN
     rdclk => clk200,
     rden => rden,
     do => fifo_dout,
-    empty => empty_rxi,
+    empty => empty_i,
     almostempty => open,
     almostfull => open,
     wrerr => open,
@@ -133,7 +133,7 @@ BEGIN
   
   
   -- Read side signals
-  empty_i <= empty_rxi and empty_rxq;
+  -- empty_i <= empty_rxi and empty_rxq;
   empty_n <= not empty_i;
   
   empty <= empty_i;
