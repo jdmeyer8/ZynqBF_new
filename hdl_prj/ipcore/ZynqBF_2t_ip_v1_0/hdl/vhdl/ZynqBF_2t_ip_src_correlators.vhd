@@ -126,6 +126,21 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
         dout                              :   OUT   vector_of_std_logic_vector32(0 TO (N-1))
         );
   end component;
+  
+  component ZynqBF_2t_ip_src_ch_est2
+  port( clk                               :   IN    std_logic;
+        reset                             :   IN    std_logic;
+        enb                               :   IN    std_logic;
+        rxi                               :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
+        rxq                               :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
+        gsi                               :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
+        gsq                               :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
+        en                                :   IN    std_logic;
+        ch_i                              :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
+        ch_q                              :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
+        done                              :   OUT   std_logic
+        );
+  end component;
         
 
   -- Component Configuration Statements
@@ -149,6 +164,9 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
     
   FOR ALL : ZynqBF_2t_ip_src_rx_gs_mult
     USE ENTITY work.ZynqBF_2t_ip_src_rx_gs_mult(rtl);
+ 
+  FOR ALL : ZynqBF_2t_ip_src_ch_est2
+    USE ENTITY work.ZynqBF_2t_ip_src_ch_est2(rtl);
 
   -- Signals
   SIGNAL addr_unsigned                    : unsigned(14 DOWNTO 0);  -- ufix15
@@ -188,6 +206,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   signal rxi_shifted                      : vector_of_std_logic_vector16(0 to 63);
   signal rxq_shifted                      : vector_of_std_logic_vector16(0 to 63);
   
+  signal rx_sel                           : integer range 0 to 63;
   
   signal vin_dreg                         : std_logic_vector(2 downto 0);   -- 3 stage delay register for vin signal
   signal inc_rx_ram_wraddr                : std_logic;                      -- flag to increment the rx ram wr addr
@@ -204,6 +223,9 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   signal gs_ram_rdaddr                    : std_logic_vector(5 downto 0);
   signal rx_in_addr                       : unsigned(14 downto 0);
   signal shift_cnt                        : unsigned(5 downto 0);
+  
+  signal pd_rxaddr                        : std_logic_vector(14 downto 0);
+  signal pd_gsaddr                        : std_logic_vector(5 downto 0);
   
   signal corr_shift                       : unsigned(5 downto 0);           -- latch value of shift_cnt at the start of the correlation
   signal corr_cnt                         : unsigned(11 downto 0);          -- correlation counter (and address for gs ram, address offset for rx ram)
@@ -222,20 +244,31 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   signal ptrack_ind                       : integer range 0 to (NCORR-1);   -- index of which correlator has a peak detected
   signal ptrack_addr_in                   : unsigned(14 downto 0);
   signal ptrack_start                     : unsigned(0 to (NCORR-1));
+  signal ptrack_en                        : unsigned(0 to (NCORR-1));
   signal ptrack_cnt                       : vector_of_unsigned8(0 to (NCORR-1));
-  constant PTRACK_CNT_END                 : unsigned(7 downto 0) := x"20";  -- look for peak across 20 samples
+  constant PTRACK_CNT_END                 : unsigned(7 downto 0) := x"40";  -- look for peak across 64 samples
   
   signal ram_index                        : std_logic_vector(14 downto 0);
   signal update_est_index                 : std_logic_vector(0 to (NCORR-1));
   signal est_index_start                  : vector_of_std_logic_vector15(0 to (NCORR-1));
   
   signal corr_threshold                   : vector_of_std_logic_vector32(0 to (NCORR-1));
-  constant corr_thresh_const              : vector_of_std_logic_vector32(0 to (NCORR-1)) := (others => x"00640000");
+  constant corr_thresh_const              : vector_of_std_logic_vector32(0 to (NCORR-1)) := (others => x"01000000");
   
-  signal main_fsm                         : vector_of_std_logic_vector4(0 to (NCORR-1));
-  constant s_peakdetect                   : std_logic_vector(3 downto 0) := "0001";
-  constant s_channelest                   : std_logic_vector(3 downto 0) := "0010";
-  constant s_reset                        : std_logic_vector(3 downto 0) := "0100";
+  signal cs_main                          : vector_of_std_logic_vector8(0 to (NCORR-1));    -- main FSM
+  constant s_peakdetect                   : std_logic_vector(3 downto 0) := "00000001";
+  constant s_wait2                        : std_logic_vector(3 downto 0) := "00000010";
+  constant s_channelest                   : std_logic_vector(3 downto 0) := "00000100";
+  constant s_wait3                        : std_logic_vector(3 downto 0) := "00001000";
+  constant s_reset                        : std_logic_vector(3 downto 0) := "00010000";
+  
+  
+  signal ch_est_en                        : unsigned(0 to (NCORR-1));
+  --signal ch_est_valid                     : std_logic_vector(0 to (NCORR-1));
+  --signal ch_est_last                      : std_logic_vector(0 to (NCORR-1));
+  signal ch_est_done                      : std_logic_vector(0 to (NCORR-1));
+  signal ch_est_rxaddr                    : std_logic_vector(14 downto 0);
+  signal ch_est_gsaddr                    : std_logic_vector(11 downto 0);
   
 BEGIN
 
@@ -243,6 +276,15 @@ BEGIN
   gsq <= gsdata;
   corr_threshold <= corr_thresh_const;
   ram_index <= std_logic_vector(unsigned(rx_ram_wraddr) - to_unsigned(16#1000#, 14));
+  rx_sel <= to_integer(unsigned(rx_ram_rdaddr(5 downto 0)));
+  
+--  rx_ram_rdaddr <= std_logic_vector(corr_cnt + corr_base);
+--  gs_ram_rdaddr <= std_logic_vector(corr_cnt(11 downto 6));
+  pd_rxaddr <= std_logic_vector(corr_cnt + corr_base);
+  pd_gsaddr <= std_logic_vector(corr_cnt(11 downto 6));
+  
+  rx_ram_rdaddr <= ch_est_rxaddr when ch_est_en > to_unsigned(16#0#, NCORR) else pd_rxaddr;
+  gs_ram_rdaddr <= ch_est_gsaddr(11 downto 6) when ch_est_en > to_unsigned(16#0#, NCORR) else pd_gsaddr;
 
   u_rx_bram : ZynqBF_2t_ip_src_rx_bram
     PORT MAP( clk => clk,
@@ -310,7 +352,7 @@ BEGIN
               
   gen_running_max: for i in 0 to (NCORR-1) generate
     u_running_max_i : ZynqBF_2t_ip_src_running_max
-        PORT MAP( clk => clk,
+      PORT MAP( clk => clk,
                 reset => reset,
                 enb => enb,
                 din => corr_dout(i),  -- sfix32_En16
@@ -320,6 +362,23 @@ BEGIN
                 max_val => open  -- sfix32_En16
                 );
   end generate;
+  
+  gen_ch_est: for i in 0 to (NCORR-1) generate
+    u_ch_est_i : ZynqBF_2t_ip_src_ch_est2
+      PORT MAP( clk => clk,
+                reset => reset,
+                enb => enb,
+                rxi => rxi(rx_sel),
+                rxq => rxq(rx_sel),
+                gsi => 
+                gsq => 
+                en => 
+                ch_i =>
+                ch_q =>
+                done =>
+                );
+  end generate;
+                  
 
   vin_delay_process : process(clk)
   begin
@@ -420,10 +479,6 @@ BEGIN
     end if;
   end process;
   
-  --corr_done <= '1' when corr_cnt(11 downto 6) = 63 else '0';
-  gs_ram_rdaddr <= std_logic_vector(corr_cnt(11 downto 6));
-  rx_ram_rdaddr <= std_logic_vector(corr_cnt + corr_base);
-  
   detect_threshold_crossing : process(clk)
   begin
     if clk'event and clk = '1' then
@@ -440,6 +495,23 @@ BEGIN
                     end if;
                 else
                     ptrack_start(i) <= '0';
+                end if;
+            end loop;
+        end if;
+    end if;
+  end process;
+  
+  ptrack_enable_register : process(clk)
+  begin
+    if clk'event and clk = '1' then
+        if reset = '1' then
+            ptrack_en <= (others => '0');
+        elsif enb = '1' then
+            for i in 0 to (NCORR-1) loop
+                if cs_ptrack(i) = s_track then
+                    ptrack_en(i) <= '1';
+                else
+                    ptrack_en(i) <= '0';
                 end if;
             end loop;
         end if;
@@ -513,6 +585,49 @@ BEGIN
         end if;
     end if;
   end process;
+  
+  main_fsm : process(clk)
+  begin
+    if clk'event and clk = '1' then
+        if reset = '1' then
+            cs_main <= (others => s_peakdetect);
+        elsif enb = '1' then
+            for i in 0 to (NCORR-1) loop
+                case cs_main(i) is
+                    when s_peakdetect =>
+                        if cs_ptrack(i) = s_finish then
+                            cs_main(i) <= s_wait2;
+                        else
+                            cs_main(i) <= s_peakdetect;
+                        end if;
+                    when s_wait2 =>
+                            if ptrack_en > to_unsigned(16#0#, NCORR) then
+                                cs_main(i) <= s_wait2;
+                            else
+                                cs_main(i) <= s_channelest;
+                            end if;
+                    when s_channelest =>
+                        if ch_est_done(i) = '1' then
+                            cs_main(i) <= s_wait3;
+                        else
+                            cs_main(i) <= s_channelest;
+                        end if;
+                    when s_wait3 =>
+                        if ch_est_en > to_unsigned(16#0#, NCORR) then
+                            cs_main(i) <= s_wait3;
+                        else
+                            cs_main(i) <= s_reset;
+                        end if;
+                    when s_reset =>
+                        cs_main(i) <= s_peakdetect;
+                    when others =>
+                        cs_main(i) <= s_peakdetect;
+                end case;
+            end loop;
+        end if;
+    end if;
+  end process;
+                            
 
   Delay9_process : PROCESS (clk)
   BEGIN
@@ -635,14 +750,6 @@ BEGIN
       END IF;
     END IF;
   END PROCESS Delay6_process;
-
-
-
-  step <= Delay3_out1;
-
-  peak_found <= Delay6_out1;
-
-  probe <= corr_vout;
 
 END rtl;
 
