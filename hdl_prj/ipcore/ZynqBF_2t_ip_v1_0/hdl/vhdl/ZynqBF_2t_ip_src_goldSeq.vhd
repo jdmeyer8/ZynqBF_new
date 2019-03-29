@@ -27,8 +27,10 @@ ENTITY ZynqBF_2t_ip_src_goldSeq IS
   PORT( clk                               :   IN    std_logic;
         reset                             :   IN    std_logic;
         enb                               :   IN    std_logic;
-        addr                              :   IN    std_logic_vector(5 DOWNTO 0);  -- ufix6
-        addr_lsb                          :   IN    std_logic_vector(5 downto 0);
+        -- addr                              :   IN    std_logic_vector(5 DOWNTO 0);  -- ufix6
+        -- addr_lsb                          :   IN    std_logic_vector(5 downto 0);
+        addr                              :   IN    vector_of_std_logic_vector6(0 to (N-1));  -- ufix6
+        addr_lsb                          :   IN    vector_of_std_logic_vector6(0 to (N-1));
         gs_out_single                     :   OUT   vector_of_std_logic_vector16(0 to (N-1));
         gs_out                            :   OUT   vector_of_std_logic_vector16(0 to (N*64 - 1))
         );
@@ -63,8 +65,8 @@ gen_rams: for i in 1 to N generate
     clk => clk,
     reset => reset,
     enb => enb,
-    addr => addr,
-    addr_lsb => addr_lsb,
+    addr => addr(i-1),
+    addr_lsb => addr_lsb(i-1),
     dout_single => gs_out_single(i-1),
     dout => gs_out(64*(i-1) to (64*i - 1))
     );

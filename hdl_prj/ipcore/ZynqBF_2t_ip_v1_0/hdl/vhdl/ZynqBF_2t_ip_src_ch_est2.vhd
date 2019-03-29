@@ -30,8 +30,9 @@ ENTITY ZynqBF_2t_ip_src_ch_est2 IS
         gsq                               :   IN    std_logic_vector(15 downto 0);
         en                                :   IN    std_logic;
         base_addr                         :   IN    std_logic_vector(14 downto 0);
-        rx_addr                           :   OUT   std_logic_vector(14 downto 0);
-        gs_addr                           :   OUT   std_logic_vector(11 downto 0);
+        rx_addr                           :   IN    std_logic_vector(14 downto 0);
+        gs_addr_msb                       :   OUT   std_logic_vector(5 downto 0);
+        gs_addr_lsb                       :   OUT   std_logic_vector(5 downto 0);
         ch_i                              :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
         ch_q                              :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
         done                              :   OUT   std_logic
@@ -59,8 +60,8 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_ch_est2 IS
           start                             :   IN    std_logic;
           en                                :   IN    std_logic;
           last                              :   IN    std_logic;
-          din1                              :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15 [2]
-          din2                              :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15 [2]
+          din1                              :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
+          din2                              :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
           ready                             :   OUT   std_logic;
           dout                              :   OUT   std_logic_vector(31 DOWNTO 0)  -- sfix32_En14
           );
@@ -80,9 +81,11 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_ch_est2 IS
   signal sum_aabb                           : signed(31 downto 0);
   
   -- dot product signals
+  signal dp_start                           : std_logic;
   signal dp_en                              : std_logic;
   signal dp_last                            : std_logic;
   signal dp_done                            : std_logic;
+  signal dp_done_reg                        : unsigned(0 to 5);
   signal dp_count                           : unsigned(11 downto 0);
   
   -- newton-raphson signals
@@ -99,12 +102,16 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_ch_est2 IS
   
 
 BEGIN
-            
+    
     done <= '1' when cs_est = s_done else '0';
     nr_signed <= signed(nr_dout);
-    rx_addr <= std_logic_vector(unsigned(base_addr) + dp_count);
-    gs_addr <= std_logic_vector(dp_count);
-         
+    gs_addr_msb <= std_logic_vector(dp_count(11 downto 6));
+    gs_addr_lsb <= std_logic_vector(dp_count(5 downto 0));
+    dp_start <= '1' when cs_est = s_wait and en = '1' else '0';
+    dp_en <= '1' when cs_est = s_dp else '0';
+    dp_last <= '1' when cs_est = s_dp and dp_count = to_unsigned(16#0fff#, dp_count'high+1) else '0';
+    dp_done <= '1' when dp_done_reg > to_unsigned(16#0#, dp_done_reg'high+1) else '0';
+    
     u_nr_reciprocal : ZynqBF_2t_ip_src_nr_reciprocal
     PORT MAP( clk => clk,
               reset => reset,
@@ -115,10 +122,18 @@ BEGIN
               valid => nr_done
               );
               
---    ac_macc_inst : ZynqBF_2t_ip_src_ch_est_mac
---    PORT MAP( clk => clk,
---              reset => reset,
---              enb => enb,
+   ac_macc_inst : ZynqBF_2t_ip_src_ch_est_mac
+   PORT MAP( clk => clk,
+             reset => reset,
+             enb => enb,
+             start => dp_start,
+             en => dp_en,
+             last => dp_last, 
+             din1 => a,
+             din2 => b,
+             ready => dp_done_reg(0),
+             dout => macc_ac
+             );
               
 
     register_inputs: process(clk)

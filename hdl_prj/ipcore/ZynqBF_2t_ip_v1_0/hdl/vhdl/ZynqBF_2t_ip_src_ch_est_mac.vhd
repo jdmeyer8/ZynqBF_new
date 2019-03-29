@@ -27,8 +27,8 @@ ENTITY ZynqBF_2t_ip_src_ch_est_mac IS
         start                             :   IN    std_logic;
         en                                :   IN    std_logic;
         last                              :   IN    std_logic;
-        din1                              :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15 [2]
-        din2                              :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15 [2]
+        din1                              :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
+        din2                              :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
         ready                             :   OUT   std_logic;
         dout                              :   OUT   std_logic_vector(31 DOWNTO 0)  -- sfix32_En14
         );
@@ -44,8 +44,8 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_ch_est_mac IS
     signal en_dreg                          : std_logic_vector(2 downto 0);
     signal en_d1, en_d2, en_d3              : std_logic;
     
-    signal last_dreg                        : std_logic_vector(7 downto 0);
-
+    signal last_dreg                        : unsigned(7 downto 0);
+    
 BEGIN
 
     en_delay : process(clk)
@@ -117,6 +117,6 @@ BEGIN
             end if;
         end if;
     end process;
-
+    
 END rtl;
 

@@ -44,17 +44,6 @@ END ZynqBF_2t_ip_src_correlators;
 ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
 
   -- Component Declarations
-  COMPONENT ZynqBF_2t_ip_src_peak_fsm
-    PORT( clk                             :   IN    std_logic;
-          reset                           :   IN    std_logic;
-          enb                             :   IN    std_logic;
-          t_cross                         :   IN    std_logic;
-          cnt_end                         :   IN    std_logic;
-          scan_peak                       :   OUT   std_logic;
-          peak_found                      :   OUT   std_logic
-          );
-  END COMPONENT;
-
   COMPONENT ZynqBF_2t_ip_src_running_max
     PORT( clk                             :   IN    std_logic;
           reset                           :   IN    std_logic;
@@ -67,16 +56,6 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
           );
   END COMPONENT;
 
-  -- COMPONENT ZynqBF_2t_ip_src_store_index
-    -- PORT( clk                             :   IN    std_logic;
-          -- reset                           :   IN    std_logic;
-          -- enb                             :   IN    std_logic;
-          -- din                             :   IN    std_logic_vector(15 DOWNTO 0);  -- int16
-          -- update                          :   IN    std_logic;
-          -- dout                            :   OUT   std_logic_vector(15 DOWNTO 0)  -- int16
-          -- );
-  -- END COMPONENT;
-  
   component ZynqBF_2t_ip_src_rx_bram 
   port( clk                               :   IN    std_logic;
         reset                             :   IN    std_logic;
@@ -99,8 +78,10 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   port( clk                               :   IN    std_logic;
         reset                             :   IN    std_logic;
         enb                               :   IN    std_logic;
-        addr                              :   IN    std_logic_vector(5 DOWNTO 0);
-        addr_lsb                          :   IN    std_logic_vector(5 downto 0);
+        -- addr                              :   IN    std_logic_vector(5 DOWNTO 0);
+        -- addr_lsb                          :   IN    std_logic_vector(5 downto 0);
+        addr                              :   IN    vector_of_std_logic_vector6(0 to (N-1));
+        addr_lsb                          :   IN    vector_of_std_logic_vector6(0 to (N-1));
         gs_out_single                     :   OUT   vector_of_std_logic_vector16(0 to (N-1));
         gs_out                            :   OUT   vector_of_std_logic_vector16(0 to (N*64 - 1))
         );
@@ -141,8 +122,9 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
         gsq                               :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
         en                                :   IN    std_logic;
         base_addr                         :   IN    std_logic_vector(14 downto 0);
-        rx_addr                           :   OUT   std_logic_vector(14 downto 0);
-        gs_addr                           :   OUT   std_logic_vector(11 downto 0);
+        rx_addr                           :   IN    std_logic_vector(14 downto 0);
+        gs_addr_msb                       :   OUT   std_logic_vector(5 downto 0);
+        gs_addr_lsb                       :   OUT   std_logic_vector(5 downto 0);
         ch_i                              :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
         ch_q                              :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
         done                              :   OUT   std_logic
@@ -151,9 +133,6 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
         
 
   -- Component Configuration Statements
-  FOR ALL : ZynqBF_2t_ip_src_peak_fsm
-    USE ENTITY work.ZynqBF_2t_ip_src_peak_fsm(rtl);
-
   FOR ALL : ZynqBF_2t_ip_src_running_max
     USE ENTITY work.ZynqBF_2t_ip_src_running_max(rtl);
 
@@ -217,9 +196,9 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   signal rxq_single                       : std_logic_vector(15 downto 0);
   signal gsi_single                       : vector_of_std_logic_vector16(0 to (NCORR-1));
   signal gsq_single                       : vector_of_std_logic_vector16(0 to (NCORR-1));
+  signal gsdata_single                    : vector_of_std_logic_vector16(0 to (NCORR-1));
   
   signal rx_sel                           : integer range 0 to 63;
-  signal gs_sel                           : integer range 0 to 63;
   
   signal vin_dreg                         : std_logic_vector(2 downto 0);   -- 3 stage delay register for vin signal
   signal inc_rx_ram_wraddr                : std_logic;                      -- flag to increment the rx ram wr addr
@@ -233,7 +212,8 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   signal rx_ram_re                        : std_logic;
   signal rx_ram_wraddr                    : std_logic_vector(14 downto 0);
   signal rx_ram_rdaddr                    : std_logic_vector(14 downto 0);
-  signal gs_ram_rdaddr                    : std_logic_vector(5 downto 0);
+  signal gs_ram_rdaddr_msb                : vector_of_std_logic_vector6(0 to (NCORR-1));
+  signal gs_ram_rdaddr_lsb                : vector_of_std_logic_vector6(0 to (NCORR-1));
   signal rx_in_addr                       : unsigned(14 downto 0);
   signal shift_cnt                        : unsigned(5 downto 0);
   
@@ -263,7 +243,6 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   
   signal ram_index                        : std_logic_vector(14 downto 0);
   signal update_est_index                 : std_logic_vector(0 to (NCORR-1));
-  signal est_index_start                  : vector_of_std_logic_vector15(0 to (NCORR-1));
   
   signal corr_threshold                   : vector_of_std_logic_vector32(0 to (NCORR-1));
   constant corr_thresh_const              : vector_of_std_logic_vector32(0 to (NCORR-1)) := (others => x"01000000");
@@ -275,32 +254,45 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   constant s_wait3                        : std_logic_vector(7 downto 0) := "00001000";
   constant s_reset                        : std_logic_vector(7 downto 0) := "00010000";
   
-  
-  signal ch_est_en                        : unsigned(0 to (NCORR-1));
+  signal ch_est_start                     : unsigned(0 to (NCORR-1));
+  signal ch_est_en                        : std_logic;
+  signal ch_est_en_reg                    : unsigned(0 to (NCORR-1));
   --signal ch_est_valid                     : std_logic_vector(0 to (NCORR-1));
   --signal ch_est_last                      : std_logic_vector(0 to (NCORR-1));
-  signal ch_est_done                      : std_logic_vector(0 to (NCORR-1));
-  signal ch_est_rxaddr                    : std_logic_vector(14 downto 0);
-  signal ch_est_gsaddr                    : std_logic_vector(11 downto 0);
+  signal ch_est_done                      : unsigned(0 to (NCORR-1));
+  signal ch_est_rxaddr                    : unsigned(14 downto 0);
+  signal ch_est_gsaddr_msb                : vector_of_std_logic_vector6(0 to (NCORR-1));
+  signal ch_est_gsaddr_lsb                : vector_of_std_logic_vector6(0 to (NCORR-1));
+  
+  signal ch_est_index_start               : vector_of_std_logic_vector15(0 to (NCORR-1));
+  signal ch_est_base_addr                 : std_logic_vector(14 downto 0);
+  signal ch_est_base_locked               : std_logic;
   
 BEGIN
 
   gsi <= gsdata;
   gsq <= gsdata;
+  gsi_single <= gsdata_single;
+  gsq_single <= gsdata_single;
   corr_threshold <= corr_thresh_const;
   ram_index <= std_logic_vector(unsigned(rx_ram_wraddr) - to_unsigned(16#1000#, 14));
   rx_sel <= to_integer(unsigned(rx_ram_rdaddr(5 downto 0)));
-  gs_sel <= to_integer(unsigned(rx_ram_rdaddr(5 downto 0)));
   rxi_single <= rxi(rx_sel);
   rxq_single <= rxq(rx_sel);
+  
+  corr_start <= vin_dreg(1) when ch_est_en_reg = to_unsigned(16#0#, NCORR) else '0';
+  inc_rx_ram_wraddr <= vin_dreg(2);
   
 --  rx_ram_rdaddr <= std_logic_vector(corr_cnt + corr_base);
 --  gs_ram_rdaddr <= std_logic_vector(corr_cnt(11 downto 6));
   pd_rxaddr <= std_logic_vector(corr_cnt + corr_base);
   pd_gsaddr <= std_logic_vector(corr_cnt(11 downto 6));
   
-  rx_ram_rdaddr <= ch_est_rxaddr when ch_est_en > to_unsigned(16#0#, NCORR) else pd_rxaddr;
-  gs_ram_rdaddr <= ch_est_gsaddr(11 downto 6) when ch_est_en > to_unsigned(16#0#, NCORR) else pd_gsaddr;
+  rx_ram_rdaddr <= std_logic_vector(ch_est_rxaddr) when ch_est_en_reg > to_unsigned(16#0#, NCORR) else pd_rxaddr;
+  gs_ram_rdaddr_msb <= ch_est_gsaddr_msb when ch_est_en_reg > to_unsigned(16#0#, NCORR) else (others => pd_gsaddr);
+  gs_ram_rdaddr_lsb <= ch_est_gsaddr_lsb when ch_est_en_reg > to_unsigned(16#0#, NCORR) else (others => (others => '0'));
+  
+  ch_est_en <= '1' when ch_est_en_reg > to_unsigned(16#0#, NCORR) else '0';
 
   u_rx_bram : ZynqBF_2t_ip_src_rx_bram
     PORT MAP( clk => clk,
@@ -323,8 +315,9 @@ BEGIN
     PORT MAP( clk => clk,
               reset => reset,
               enb => enb,
-              addr => gs_ram_rdaddr,
-              addr_lsb => ch_est_gsaddr(5 downto 0),
+              addr => gs_ram_rdaddr_msb,
+              addr_lsb => gs_ram_rdaddr_lsb,
+              gs_out_single => gsdata_single,
               gs_out => gsdata
               );
               
@@ -344,7 +337,8 @@ BEGIN
               y => rxq_shifted
               );
   
-  test_macc : ZynqBF_2t_ip_src_rx_gs_mult
+  u_rx_gs_mult : ZynqBF_2t_ip_src_rx_gs_mult
+    GENERIC MAP ( N => NCORR)
     PORT MAP( clk => clk,
               reset => reset,
               enb => enb,
@@ -358,17 +352,6 @@ BEGIN
               dout => corr_dout
               );
 
-  u_peak_fsm : ZynqBF_2t_ip_src_peak_fsm
-    PORT MAP( clk => clk,
-              reset => reset,
-              enb => enb,
-              t_cross => Compare_To_Constant_out1,
-              cnt_end => Logical_Operator7_out1,
-              scan_peak => peak_fsm_out1,
-              peak_found => peak_fsm_out2
-              );
-
-              
   gen_running_max: for i in 0 to (NCORR-1) generate
     u_running_max_i : ZynqBF_2t_ip_src_running_max
       PORT MAP( clk => clk,
@@ -391,10 +374,11 @@ BEGIN
                 rxq => rxq_single,
                 gsi => gsi_single(i),
                 gsq => gsq_single(i),
-                en => ch_est_en(i),
-                base_addr => est_index_start(i),
-                rx_addr => ch_est_rxaddr,
-                gs_addr => ch_est_gsaddr,
+                en => ch_est_en,
+                base_addr => ch_est_index_start(i),
+                rx_addr => std_logic_vector(ch_est_rxaddr),
+                gs_addr_msb => ch_est_gsaddr_msb(i),
+                gs_addr_lsb => ch_est_gsaddr_lsb(i),
                 ch_i => open,
                 ch_q => open,
                 done => open
@@ -412,9 +396,6 @@ BEGIN
         end if;
     end if;
   end process;
-  
-  corr_start <= vin_dreg(1);
-  inc_rx_ram_wraddr <= vin_dreg(2);
   
   addr_in_counters_process : process(clk)
   begin
@@ -597,11 +578,20 @@ BEGIN
   begin
     if clk'event and clk = '1' then
         if reset = '1' then
-            est_index_start <= (others => (others => '0'));
+            ch_est_index_start <= (others => (others => '0'));
+            ch_est_base_addr <= (others => '0');
+            ch_est_base_locked <= '0';
         elsif enb = '1' then
             for i in 0 to (NCORR-1) loop
                 if update_est_index(i) = '1' then
-                    est_index_start(i) <= ram_index;
+                    ch_est_index_start(i) <= ram_index;
+                    if ch_est_base_locked = '0' then
+                        ch_est_base_addr <= ram_index;
+                        ch_est_base_locked <= '1';
+                    end if;
+                elsif cs_main(i) = s_reset then
+                    ch_est_base_addr <= (others => '0');
+                    ch_est_base_locked <= '0';
                 end if;
             end loop;
         end if;
@@ -635,7 +625,7 @@ BEGIN
                             cs_main(i) <= s_channelest;
                         end if;
                     when s_wait3 =>
-                        if ch_est_en > to_unsigned(16#0#, NCORR) then
+                        if ch_est_en_reg > to_unsigned(16#0#, NCORR) then
                             cs_main(i) <= s_wait3;
                         else
                             cs_main(i) <= s_reset;
@@ -649,7 +639,58 @@ BEGIN
         end if;
     end if;
   end process;
-                            
+  
+  channel_estimate_start : process(clk)
+  begin
+    if clk'event and clk = '1' then
+        if reset = '1' then
+            ch_est_start <= (others => '0');
+        elsif enb = '1' then
+            for i in 0 to (NCORR-1) loop
+                if cs_main(i) = s_wait2 and ptrack_en > to_unsigned(16#0#, NCORR) then
+                    ch_est_start(i) <= '1';
+                else
+                    ch_est_start(i) <= '0';
+                end if;
+            end loop;
+        end if;
+    end if;
+  end process;
+  
+  channel_estimate_enable : process(clk)
+  begin
+    if clk'event and clk = '1' then
+        if reset = '1' then
+            ch_est_en_reg <= (others => '0');
+        elsif enb = '1' then
+            for i in 0 to (NCORR-1) loop
+                if cs_main(i) = s_channelest then
+                    ch_est_en_reg(i) <= '1';
+                else
+                    ch_est_en_reg(i) <= '0';
+                end if;
+            end loop;
+        end if;
+    end if;
+  end process;
+  
+  channel_estimate_rxaddr_process : process(clk)
+  begin
+    if clk'event and clk = '1' then
+        if reset = '1' then
+            ch_est_rxaddr <= (others => '0');
+        elsif enb = '1' then
+            if ch_est_en = '1' then
+                ch_est_rxaddr <= ch_est_rxaddr + 1;
+            elsif ch_est_start > to_unsigned(16#0#, NCORR) then
+                ch_est_rxaddr <= unsigned(ch_est_base_addr);
+            elsif ch_est_done > to_unsigned(16#0#, NCORR) then
+                ch_est_rxaddr <= (others => '0');
+            end if;
+        end if;
+    end if;
+  end process;
+  
 
   Delay9_process : PROCESS (clk)
   BEGIN
