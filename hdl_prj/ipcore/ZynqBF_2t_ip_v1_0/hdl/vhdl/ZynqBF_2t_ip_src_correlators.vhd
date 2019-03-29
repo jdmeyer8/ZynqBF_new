@@ -87,6 +87,8 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
         wr_addr                           :   IN    std_logic_vector(14 DOWNTO 0);  -- ufix15
         rd_addr                           :   IN    std_logic_vector(14 DOWNTO 0);  -- ufix15
         shift                             :   IN    std_logic_vector(5 DOWNTO 0);  -- ufix15
+--        dout_i_single                     :   OUT   std_logic_vector(15 downto 0);
+--        dout_q_single                     :   OUT   std_logic_vector(15 downto 0);
         dout_i                            :   OUT   vector_of_std_logic_vector16(0 TO 63);  -- rx i data for the correlators
         dout_q                            :   OUT   vector_of_std_logic_vector16(0 TO 63)   -- rx q data for the correlators
         );
@@ -98,6 +100,8 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
         reset                             :   IN    std_logic;
         enb                               :   IN    std_logic;
         addr                              :   IN    std_logic_vector(5 DOWNTO 0);
+        addr_lsb                          :   IN    std_logic_vector(5 downto 0);
+        gs_out_single                     :   OUT   vector_of_std_logic_vector16(0 to (N-1));
         gs_out                            :   OUT   vector_of_std_logic_vector16(0 to (N*64 - 1))
         );
   end component;
@@ -136,6 +140,9 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
         gsi                               :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
         gsq                               :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
         en                                :   IN    std_logic;
+        base_addr                         :   IN    std_logic_vector(14 downto 0);
+        rx_addr                           :   OUT   std_logic_vector(14 downto 0);
+        gs_addr                           :   OUT   std_logic_vector(11 downto 0);
         ch_i                              :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
         ch_q                              :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
         done                              :   OUT   std_logic
@@ -206,7 +213,13 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   signal rxi_shifted                      : vector_of_std_logic_vector16(0 to 63);
   signal rxq_shifted                      : vector_of_std_logic_vector16(0 to 63);
   
+  signal rxi_single                       : std_logic_vector(15 downto 0);
+  signal rxq_single                       : std_logic_vector(15 downto 0);
+  signal gsi_single                       : vector_of_std_logic_vector16(0 to (NCORR-1));
+  signal gsq_single                       : vector_of_std_logic_vector16(0 to (NCORR-1));
+  
   signal rx_sel                           : integer range 0 to 63;
+  signal gs_sel                           : integer range 0 to 63;
   
   signal vin_dreg                         : std_logic_vector(2 downto 0);   -- 3 stage delay register for vin signal
   signal inc_rx_ram_wraddr                : std_logic;                      -- flag to increment the rx ram wr addr
@@ -256,11 +269,11 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   constant corr_thresh_const              : vector_of_std_logic_vector32(0 to (NCORR-1)) := (others => x"01000000");
   
   signal cs_main                          : vector_of_std_logic_vector8(0 to (NCORR-1));    -- main FSM
-  constant s_peakdetect                   : std_logic_vector(3 downto 0) := "00000001";
-  constant s_wait2                        : std_logic_vector(3 downto 0) := "00000010";
-  constant s_channelest                   : std_logic_vector(3 downto 0) := "00000100";
-  constant s_wait3                        : std_logic_vector(3 downto 0) := "00001000";
-  constant s_reset                        : std_logic_vector(3 downto 0) := "00010000";
+  constant s_peakdetect                   : std_logic_vector(7 downto 0) := "00000001";
+  constant s_wait2                        : std_logic_vector(7 downto 0) := "00000010";
+  constant s_channelest                   : std_logic_vector(7 downto 0) := "00000100";
+  constant s_wait3                        : std_logic_vector(7 downto 0) := "00001000";
+  constant s_reset                        : std_logic_vector(7 downto 0) := "00010000";
   
   
   signal ch_est_en                        : unsigned(0 to (NCORR-1));
@@ -277,6 +290,9 @@ BEGIN
   corr_threshold <= corr_thresh_const;
   ram_index <= std_logic_vector(unsigned(rx_ram_wraddr) - to_unsigned(16#1000#, 14));
   rx_sel <= to_integer(unsigned(rx_ram_rdaddr(5 downto 0)));
+  gs_sel <= to_integer(unsigned(rx_ram_rdaddr(5 downto 0)));
+  rxi_single <= rxi(rx_sel);
+  rxq_single <= rxq(rx_sel);
   
 --  rx_ram_rdaddr <= std_logic_vector(corr_cnt + corr_base);
 --  gs_ram_rdaddr <= std_logic_vector(corr_cnt(11 downto 6));
@@ -296,6 +312,8 @@ BEGIN
               wr_addr => rx_ram_wraddr,
               rd_addr => rx_ram_rdaddr,
               shift => std_logic_vector(corr_shift),
+--              dout_i_single => rxi_single,
+--              dout_q_single => rxq_single,
               dout_i => rxi,
               dout_q => rxq
               );
@@ -306,6 +324,7 @@ BEGIN
               reset => reset,
               enb => enb,
               addr => gs_ram_rdaddr,
+              addr_lsb => ch_est_gsaddr(5 downto 0),
               gs_out => gsdata
               );
               
@@ -368,14 +387,17 @@ BEGIN
       PORT MAP( clk => clk,
                 reset => reset,
                 enb => enb,
-                rxi => rxi(rx_sel),
-                rxq => rxq(rx_sel),
-                gsi => 
-                gsq => 
-                en => 
-                ch_i =>
-                ch_q =>
-                done =>
+                rxi => rxi_single,
+                rxq => rxq_single,
+                gsi => gsi_single(i),
+                gsq => gsq_single(i),
+                en => ch_est_en(i),
+                base_addr => est_index_start(i),
+                rx_addr => ch_est_rxaddr,
+                gs_addr => ch_est_gsaddr,
+                ch_i => open,
+                ch_q => open,
+                done => open
                 );
   end generate;
                   

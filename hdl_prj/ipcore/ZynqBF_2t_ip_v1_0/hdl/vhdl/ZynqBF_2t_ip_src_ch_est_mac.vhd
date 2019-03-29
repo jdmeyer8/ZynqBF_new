@@ -74,7 +74,7 @@ BEGIN
         end if;
     end process;
     
-    done <= last_dreg(3);
+    ready <= last_dreg(3);
 
     register_inputs : process(clk)
     begin
@@ -87,8 +87,8 @@ BEGIN
                     macc_a <= (others => '0');
                     macc_b <= (others => '0');
                 else
-                    macc_a <= din1;
-                    macc_b <= din2;
+                    macc_a <= signed(din1);
+                    macc_b <= signed(din2);
                 end if;
             end if;
         end if;

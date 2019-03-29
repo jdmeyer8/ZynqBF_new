@@ -28,6 +28,8 @@ ENTITY ZynqBF_2t_ip_src_goldSeq IS
         reset                             :   IN    std_logic;
         enb                               :   IN    std_logic;
         addr                              :   IN    std_logic_vector(5 DOWNTO 0);  -- ufix6
+        addr_lsb                          :   IN    std_logic_vector(5 downto 0);
+        gs_out_single                     :   OUT   vector_of_std_logic_vector16(0 to (N-1));
         gs_out                            :   OUT   vector_of_std_logic_vector16(0 to (N*64 - 1))
         );
 END ZynqBF_2t_ip_src_goldSeq;
@@ -43,6 +45,8 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_goldSeq IS
         reset                             :   IN    std_logic;
         enb                               :   IN    std_logic;
         addr                              :   IN    std_logic_vector(5 downto 0);
+        addr_lsb                          :   IN    std_logic_vector(5 downto 0);
+        dout_single                       :   OUT   std_logic_vector(15 downto 0);
         dout                              :   OUT   vector_of_std_logic_vector16(0 to 63)
         );
   end component;
@@ -60,6 +64,8 @@ gen_rams: for i in 1 to N generate
     reset => reset,
     enb => enb,
     addr => addr,
+    addr_lsb => addr_lsb,
+    dout_single => gs_out_single(i-1),
     dout => gs_out(64*(i-1) to (64*i - 1))
     );
 end generate;

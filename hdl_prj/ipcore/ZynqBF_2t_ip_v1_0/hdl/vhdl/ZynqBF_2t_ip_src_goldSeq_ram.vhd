@@ -28,6 +28,8 @@ ENTITY ZynqBF_2t_ip_src_goldSeq_ram IS
         reset                             :   IN    std_logic;
         enb                               :   IN    std_logic;
         addr                              :   IN    std_logic_vector(5 DOWNTO 0);  -- ufix6
+        addr_lsb                          :   IN    std_logic_vector(5 downto 0);
+        dout_single                       :   OUT   std_logic_vector(15 downto 0);
         dout                              :   OUT   vector_of_std_logic_vector16(0 to 63)
         );
 END ZynqBF_2t_ip_src_goldSeq_ram;
@@ -117,10 +119,12 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_goldSeq_ram IS
 
     signal we:          std_logic_vector(0 downto 0);
     signal dout_i:      std_logic_vector(1023 downto 0);
+    signal sel:         integer range 0 to 63;
         
 BEGIN
   
     we(0) <= '0';
+    sel <= to_integer(unsigned(addr_lsb));
     
     gen_gs1: if CHANNEL = 1 generate
         u_gsram1: gsram1
@@ -214,8 +218,10 @@ BEGIN
     begin
         if clk'event and clk = '1' then
             if reset = '1' then
+                dout_single <= (others => '0');
                 dout <= (others => (others => '0'));
             elsif enb = '1' then
+                dout_single <= dout_i((16*sel+15) downto (16*sel));
                 for i in 0 to 63 loop
                     dout(i) <= dout_i((16*i+15) downto (16*i));
                 end loop;

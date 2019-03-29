@@ -102,6 +102,7 @@ BEGIN
             
     done <= '1' when cs_est = s_done else '0';
     nr_signed <= signed(nr_dout);
+    rx_addr <= std_logic_vector(unsigned(base_addr) + dp_count);
     gs_addr <= std_logic_vector(dp_count);
          
     u_nr_reciprocal : ZynqBF_2t_ip_src_nr_reciprocal
