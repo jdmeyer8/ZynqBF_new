@@ -120,6 +120,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
         rxq                               :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
         gsi                               :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
         gsq                               :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
+        start                             :   IN    std_logic;
         en                                :   IN    std_logic;
         base_addr                         :   IN    std_logic_vector(14 downto 0);
         rx_addr                           :   IN    std_logic_vector(14 downto 0);
@@ -254,11 +255,10 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   constant s_wait3                        : std_logic_vector(7 downto 0) := "00001000";
   constant s_reset                        : std_logic_vector(7 downto 0) := "00010000";
   
-  signal ch_est_start                     : unsigned(0 to (NCORR-1));
+  signal ch_est_start                     : std_logic;
+  signal ch_est_start_reg                 : unsigned(0 to (NCORR-1));
   signal ch_est_en                        : std_logic;
   signal ch_est_en_reg                    : unsigned(0 to (NCORR-1));
-  --signal ch_est_valid                     : std_logic_vector(0 to (NCORR-1));
-  --signal ch_est_last                      : std_logic_vector(0 to (NCORR-1));
   signal ch_est_done                      : unsigned(0 to (NCORR-1));
   signal ch_est_rxaddr                    : unsigned(14 downto 0);
   signal ch_est_gsaddr_msb                : vector_of_std_logic_vector6(0 to (NCORR-1));
@@ -292,6 +292,7 @@ BEGIN
   gs_ram_rdaddr_msb <= ch_est_gsaddr_msb when ch_est_en_reg > to_unsigned(16#0#, NCORR) else (others => pd_gsaddr);
   gs_ram_rdaddr_lsb <= ch_est_gsaddr_lsb when ch_est_en_reg > to_unsigned(16#0#, NCORR) else (others => (others => '0'));
   
+  ch_est_start <= '1' when ch_est_start_reg > to_unsigned(16#0#, NCORR) else '0';
   ch_est_en <= '1' when ch_est_en_reg > to_unsigned(16#0#, NCORR) else '0';
 
   u_rx_bram : ZynqBF_2t_ip_src_rx_bram
@@ -374,6 +375,7 @@ BEGIN
                 rxq => rxq_single,
                 gsi => gsi_single(i),
                 gsq => gsq_single(i),
+                start => ch_est_start,
                 en => ch_est_en,
                 base_addr => ch_est_index_start(i),
                 rx_addr => std_logic_vector(ch_est_rxaddr),
@@ -381,7 +383,7 @@ BEGIN
                 gs_addr_lsb => ch_est_gsaddr_lsb(i),
                 ch_i => open,
                 ch_q => open,
-                done => open
+                done => ch_est_done(i)
                 );
   end generate;
                   
@@ -579,20 +581,33 @@ BEGIN
     if clk'event and clk = '1' then
         if reset = '1' then
             ch_est_index_start <= (others => (others => '0'));
-            ch_est_base_addr <= (others => '0');
-            ch_est_base_locked <= '0';
         elsif enb = '1' then
             for i in 0 to (NCORR-1) loop
                 if update_est_index(i) = '1' then
                     ch_est_index_start(i) <= ram_index;
-                    if ch_est_base_locked = '0' then
-                        ch_est_base_addr <= ram_index;
-                        ch_est_base_locked <= '1';
-                    end if;
-                elsif cs_main(i) = s_reset then
-                    ch_est_base_addr <= (others => '0');
-                    ch_est_base_locked <= '0';
                 end if;
+            end loop;
+        end if;
+    end if;
+  end process;
+  
+  first_address_ch_est : process(clk)
+  begin
+    if clk'event and clk = '1' then
+      if reset = '1' then
+          ch_est_base_addr <= (others => '0');
+          ch_est_base_locked <= '0';
+      elsif enb = '1' then
+          for i in 0 to (NCORR-1) loop
+              if cs_main(i) = s_wait2 then
+                  if ch_est_base_locked = '0' then
+                      ch_est_base_addr <= ch_est_index_start(i);
+                      ch_est_base_locked <= '1';
+                  end if;
+              elsif cs_main(i) = s_reset then
+                  ch_est_base_addr <= (others => '0');
+                  ch_est_base_locked <= '0';
+              end if;
             end loop;
         end if;
     end if;
@@ -644,13 +659,13 @@ BEGIN
   begin
     if clk'event and clk = '1' then
         if reset = '1' then
-            ch_est_start <= (others => '0');
+            ch_est_start_reg <= (others => '0');
         elsif enb = '1' then
             for i in 0 to (NCORR-1) loop
-                if cs_main(i) = s_wait2 and ptrack_en > to_unsigned(16#0#, NCORR) then
-                    ch_est_start(i) <= '1';
+                if cs_main(i) = s_wait2 and ptrack_en = to_unsigned(16#0#, NCORR) then
+                    ch_est_start_reg(i) <= '1';
                 else
-                    ch_est_start(i) <= '0';
+                    ch_est_start_reg(i) <= '0';
                 end if;
             end loop;
         end if;
@@ -682,7 +697,7 @@ BEGIN
         elsif enb = '1' then
             if ch_est_en = '1' then
                 ch_est_rxaddr <= ch_est_rxaddr + 1;
-            elsif ch_est_start > to_unsigned(16#0#, NCORR) then
+            elsif ch_est_start = '1' then
                 ch_est_rxaddr <= unsigned(ch_est_base_addr);
             elsif ch_est_done > to_unsigned(16#0#, NCORR) then
                 ch_est_rxaddr <= (others => '0');

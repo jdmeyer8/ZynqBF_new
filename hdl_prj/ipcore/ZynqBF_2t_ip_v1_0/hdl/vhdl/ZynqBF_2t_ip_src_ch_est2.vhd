@@ -28,6 +28,7 @@ ENTITY ZynqBF_2t_ip_src_ch_est2 IS
         rxq                               :   IN    std_logic_vector(15 downto 0);
         gsi                               :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
         gsq                               :   IN    std_logic_vector(15 downto 0);
+        start                             :   IN    std_logic;
         en                                :   IN    std_logic;
         base_addr                         :   IN    std_logic_vector(14 downto 0);
         rx_addr                           :   IN    std_logic_vector(14 downto 0);
@@ -77,7 +78,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_ch_est2 IS
   signal a, b, c, d                         : std_logic_vector(15 downto 0);
   signal macc_ac, macc_bd                   : std_logic_vector(31 downto 0);
   signal macc_ad, macc_bc                   : std_logic_vector(31 downto 0);
-  signal macc_done                          : std_logic_vector(5 downto 0);
+  signal macc_aa, macc_bb                   : std_logic_vector(31 downto 0);
   signal sum_aabb                           : signed(31 downto 0);
   
   -- dot product signals
@@ -130,10 +131,75 @@ BEGIN
              en => dp_en,
              last => dp_last, 
              din1 => a,
-             din2 => b,
+             din2 => c,
              ready => dp_done_reg(0),
              dout => macc_ac
              );
+             
+   bd_macc_inst : ZynqBF_2t_ip_src_ch_est_mac
+   PORT MAP( clk => clk,
+             reset => reset,
+             enb => enb,
+             start => dp_start,
+             en => dp_en,
+             last => dp_last, 
+             din1 => b,
+             din2 => d,
+             ready => dp_done_reg(1),
+             dout => macc_bd
+             );
+             
+   ad_macc_inst : ZynqBF_2t_ip_src_ch_est_mac
+   PORT MAP( clk => clk,
+             reset => reset,
+             enb => enb,
+             start => dp_start,
+             en => dp_en,
+             last => dp_last, 
+             din1 => a,
+             din2 => d,
+             ready => dp_done_reg(2),
+             dout => macc_ad
+             );
+             
+   bc_macc_inst : ZynqBF_2t_ip_src_ch_est_mac
+   PORT MAP( clk => clk,
+             reset => reset,
+             enb => enb,
+             start => dp_start,
+             en => dp_en,
+             last => dp_last, 
+             din1 => b,
+             din2 => c,
+             ready => dp_done_reg(3),
+             dout => macc_bc
+             );
+             
+   aa_macc_inst : ZynqBF_2t_ip_src_ch_est_mac
+   PORT MAP( clk => clk,
+             reset => reset,
+             enb => enb,
+             start => dp_start,
+             en => dp_en,
+             last => dp_last, 
+             din1 => a,
+             din2 => a,
+             ready => dp_done_reg(4),
+             dout => macc_aa
+             );
+             
+   bb_macc_inst : ZynqBF_2t_ip_src_ch_est_mac
+   PORT MAP( clk => clk,
+             reset => reset,
+             enb => enb,
+             start => dp_start,
+             en => dp_en,
+             last => dp_last, 
+             din1 => b,
+             din2 => b,
+             ready => dp_done_reg(5),
+             dout => macc_bb
+             );         
               
 
     register_inputs: process(clk)
@@ -163,13 +229,14 @@ BEGIN
             elsif enb = '1' then
                 case cs_est is
                     when s_wait =>
-                        if en = '1' then
+                        --if en = '1' then
+                        if start = '1' then
                             cs_est <= s_dp;
                         else
                             cs_est <= s_wait;
                         end if;
                     when s_dp =>
-                        if unsigned(macc_done) > to_unsigned(16#0#, 6) then
+                        if dp_done_reg > to_unsigned(16#0#, dp_done_reg'high+1) then
                             cs_est <= s_nr;
                         else
                             cs_est <= s_dp;

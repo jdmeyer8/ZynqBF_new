@@ -21,7 +21,7 @@ rx1_data = zeros(20e3, 1);
 rx1_rand = zeros(20e3,1);
 rx1_data(10:10+numel(gs1)-1) = gs1;
 n1_rand = numel(10+numel(gs1):numel(rx1_data));
-rx1_rand(10+numel(gs1):numel(rx1)) = 0.45*rand(n1_rand,1) + 1i*0.45*rand(n1_rand,1);
+rx1_rand(10+numel(gs1):numel(rx1_data)) = 0.45*rand(n1_rand,1) + 1i*0.45*rand(n1_rand,1);
 
 rx1 = rx1_data + rx1_rand;
 
