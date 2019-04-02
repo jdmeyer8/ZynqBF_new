@@ -66,8 +66,8 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
         wr_addr                           :   IN    std_logic_vector(14 DOWNTO 0);  -- ufix15
         rd_addr                           :   IN    std_logic_vector(14 DOWNTO 0);  -- ufix15
         shift                             :   IN    std_logic_vector(5 DOWNTO 0);  -- ufix15
---        dout_i_single                     :   OUT   std_logic_vector(15 downto 0);
---        dout_q_single                     :   OUT   std_logic_vector(15 downto 0);
+        dout_i_single                     :   OUT   std_logic_vector(15 downto 0);
+        dout_q_single                     :   OUT   std_logic_vector(15 downto 0);
         dout_i                            :   OUT   vector_of_std_logic_vector16(0 TO 63);  -- rx i data for the correlators
         dout_q                            :   OUT   vector_of_std_logic_vector16(0 TO 63)   -- rx q data for the correlators
         );
@@ -213,6 +213,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   signal rx_ram_re                        : std_logic;
   signal rx_ram_wraddr                    : std_logic_vector(14 downto 0);
   signal rx_ram_rdaddr                    : std_logic_vector(14 downto 0);
+  signal rx_ram_shift                     : std_logic_vector(5 downto 0);
   signal gs_ram_rdaddr_msb                : vector_of_std_logic_vector6(0 to (NCORR-1));
   signal gs_ram_rdaddr_lsb                : vector_of_std_logic_vector6(0 to (NCORR-1));
   signal rx_in_addr                       : unsigned(14 downto 0);
@@ -270,17 +271,17 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   
 BEGIN
 
-  gsi <= gsdata;
-  gsq <= gsdata;
-  gsi_single <= gsdata_single;
-  gsq_single <= gsdata_single;
+  --gsi <= gsdata;
+  --gsq <= gsdata;
+  --gsi_single <= gsdata_single;
+  --gsq_single <= gsdata_single;
   corr_threshold <= corr_thresh_const;
-  ram_index <= std_logic_vector(unsigned(rx_ram_wraddr) - to_unsigned(16#1000#, 14));
-  rx_sel <= to_integer(unsigned(rx_ram_rdaddr(5 downto 0)));
-  rxi_single <= rxi(rx_sel);
-  rxq_single <= rxq(rx_sel);
+  ram_index <= std_logic_vector(unsigned(rx_ram_wraddr) - to_unsigned(16#1000#, ram_index'length));
+  --rx_sel <= to_integer(unsigned(rx_ram_rdaddr(5 downto 0)));
+  --rxi_single <= rxi(rx_sel);
+  --rxq_single <= rxq(rx_sel);
   
-  corr_start <= vin_dreg(1) when ch_est_en_reg = to_unsigned(16#0#, NCORR) else '0';
+  corr_start <= vin_dreg(2) when ch_est_en_reg = to_unsigned(16#0#, NCORR) else '0';
   inc_rx_ram_wraddr <= vin_dreg(2);
   
 --  rx_ram_rdaddr <= std_logic_vector(corr_cnt + corr_base);
@@ -288,9 +289,10 @@ BEGIN
   pd_rxaddr <= std_logic_vector(corr_cnt + corr_base);
   pd_gsaddr <= std_logic_vector(corr_cnt(11 downto 6));
   
-  rx_ram_rdaddr <= std_logic_vector(ch_est_rxaddr) when ch_est_en_reg > to_unsigned(16#0#, NCORR) else pd_rxaddr;
-  gs_ram_rdaddr_msb <= ch_est_gsaddr_msb when ch_est_en_reg > to_unsigned(16#0#, NCORR) else (others => pd_gsaddr);
-  gs_ram_rdaddr_lsb <= ch_est_gsaddr_lsb when ch_est_en_reg > to_unsigned(16#0#, NCORR) else (others => (others => '0'));
+  rx_ram_rdaddr <= std_logic_vector(ch_est_rxaddr) when ch_est_en = '1' else pd_rxaddr;
+  rx_ram_shift <= std_logic_vector(shift_cnt) when ch_est_en = '1' else std_logic_vector(corr_shift);
+  gs_ram_rdaddr_msb <= ch_est_gsaddr_msb when ch_est_en = '1' else (others => pd_gsaddr);
+  gs_ram_rdaddr_lsb <= ch_est_gsaddr_lsb when ch_est_en = '1' else (others => (others => '0'));
   
   ch_est_start <= '1' when ch_est_start_reg > to_unsigned(16#0#, NCORR) else '0';
   ch_est_en <= '1' when ch_est_en_reg > to_unsigned(16#0#, NCORR) else '0';
@@ -304,9 +306,9 @@ BEGIN
               we => vin,
               wr_addr => rx_ram_wraddr,
               rd_addr => rx_ram_rdaddr,
-              shift => std_logic_vector(corr_shift),
---              dout_i_single => rxi_single,
---              dout_q_single => rxq_single,
+              shift => rx_ram_shift,
+              dout_i_single => rxi_single,
+              dout_q_single => rxq_single,
               dout_i => rxi,
               dout_q => rxq
               );
@@ -387,6 +389,23 @@ BEGIN
                 );
   end generate;
                   
+                  
+  register_gs_data : process(clk)
+  begin
+    if clk'event and clk = '1' then
+        if reset = '1' then
+            gsi <= (others => (others => '0'));
+            gsq <= (others => (others => '0'));
+            gsi_single <= (others => (others => '0'));
+            gsq_single <= (others => (others => '0'));
+        elsif enb = '1' then
+            gsi <= gsdata;
+            gsq <= gsdata;
+            gsi_single <= gsdata_single;
+            gsq_single <= gsdata_single;
+        end if;
+    end if;
+  end process;
 
   vin_delay_process : process(clk)
   begin
@@ -402,7 +421,7 @@ BEGIN
   addr_in_counters_process : process(clk)
   begin
     if clk'event and clk = '1' then
-        if reset = '1' or rst = '1' then
+        if reset = '1' or ch_est_start = '1' then
             rx_in_addr <= (others => '0');
             shift_cnt <= (others => '0');
         elsif enb = '1' and inc_rx_ram_wraddr = '1' then

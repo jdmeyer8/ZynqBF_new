@@ -30,6 +30,8 @@ ENTITY ZynqBF_2t_ip_src_rx_bram IS
         wr_addr                           :   IN    std_logic_vector(14 downto 0);
         rd_addr                           :   IN    std_logic_vector(14 DOWNTO 0);  -- ufix15
         shift                             :   IN    std_logic_vector(5 downto 0);
+        dout_i_single                     :   OUT   std_logic_vector(15 downto 0);
+        dout_q_single                     :   OUT   std_logic_vector(15 downto 0);
         dout_i                            :   OUT   vector_of_std_logic_vector16(0 TO 63);  -- rx i data for the correlators
         dout_q                            :   OUT   vector_of_std_logic_vector16(0 TO 63)   -- rx q data for the correlators
         );
@@ -57,22 +59,34 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_rx_bram IS
 
   -- Signals
   
-  signal we_d1                            : std_logic;
-  signal we1, we2                         : std_logic_vector(0 downto 0);       -- to comply with Xilinx IP core RAM
-  signal wr_addr_cnt                      : unsigned(14 DOWNTO 0);              -- wr address counter that counts up to 32,768
-  signal wr_addr_i                        : std_logic_vector(13 DOWNTO 0);      -- wr address for each of the 2 RAMs - RAM1 is written to when bit 6 is 0, RAM2 is written to when bit 6 is 1
-  signal rd_addr_i                        : std_logic_vector(13 DOWNTO 0);      -- rd address for each of the 2 RAMs - RAM1 is read from when bit 6 is 0, RAM2 is read from when bit 6 is 1
-  signal douta_i1, doutb_i1               : std_logic_vector(511 downto 0);
-  signal douta_i2, doutb_i2               : std_logic_vector(511 downto 0);
-  signal douta_q1, doutb_q1               : std_logic_vector(511 downto 0);
-  signal douta_q2, doutb_q2               : std_logic_vector(511 downto 0);
-  signal addra, addrb                     : std_logic_vector(13 downto 0);
-  constant sw_bit                         : integer range 0 to 13 := 5;
+  signal we_d1                              : std_logic;
+  signal we1, we2                           : std_logic_vector(0 downto 0);       -- to comply with Xilinx IP core RAM
+  signal wr_addr_cnt                        : unsigned(14 DOWNTO 0);              -- wr address counter that counts up to 32,768
+  signal wr_addr_i                          : std_logic_vector(13 DOWNTO 0);      -- wr address for each of the 2 RAMs - RAM1 is written to when bit 6 is 0, RAM2 is written to when bit 6 is 1
+  signal rd_addr_i                          : std_logic_vector(13 DOWNTO 0);      -- rd address for each of the 2 RAMs - RAM1 is read from when bit 6 is 0, RAM2 is read from when bit 6 is 1
+  signal douta_i1, doutb_i1                 : std_logic_vector(511 downto 0);
+  signal douta_i2, doutb_i2                 : std_logic_vector(511 downto 0);
+  signal douta_q1, doutb_q1                 : std_logic_vector(511 downto 0);
+  signal douta_q2, doutb_q2                 : std_logic_vector(511 downto 0);
   
-  signal shift_i                          : integer range 0 to 63;
+  signal dout_i1_single, dout_i2_single     : std_logic_vector(15 downto 0);
+  signal dout_q1_single, dout_q2_single     : std_logic_vector(15 downto 0);
+  
+  signal addra, addrb                       : std_logic_vector(13 downto 0);
+  constant sw_bit                           : integer range 0 to 13 := 5;
+  
+  signal addr_lsb                           : integer range 0 to 63;
+  signal shift_i                            : integer range 0 to 63;
+  
+  signal rd_addr_d1                         : std_logic_vector(14 downto 0);
+  signal rd_addr_d2                         : std_logic_vector(14 downto 0);
+  signal rd_addr_d3                         : std_logic_vector(14 downto 0);
 
 BEGIN
 
+  dout_i_single <= douta_i2((15+16*addr_lsb) downto (16*addr_lsb)) when rd_addr_d3(sw_bit) = '1' else douta_i1((15+16*addr_lsb) downto (16*addr_lsb));
+  dout_q_single <= douta_q2((15+16*addr_lsb) downto (16*addr_lsb)) when rd_addr_d3(sw_bit) = '1' else douta_q1((15+16*addr_lsb) downto (16*addr_lsb));
+  addr_lsb <= to_integer(unsigned(rd_addr_d3((sw_bit-1) downto 0)));
   shift_i <= to_integer(unsigned(shift));
 
   we1(0) <= not wr_addr(sw_bit) and we; --we_d1;
@@ -82,7 +96,8 @@ BEGIN
   rd_addr_i <= std_logic_vector(rd_addr(14 downto (sw_bit+1))) & std_logic_vector(rd_addr((sw_bit-1) downto 0));
   
   addra <= wr_addr_i when we = '1' else rd_addr_i;
-  addrb <= std_logic_vector(unsigned(addra) + to_unsigned(64,addrb'length));
+  -- addrb <= std_logic_vector(unsigned(addra) + to_unsigned(64,addrb'length));
+  addrb <= std_logic_vector(unsigned(addra) + to_unsigned(32,addrb'length));
   
   rxi_ram1 : rx_ram_core
   PORT MAP (
@@ -145,6 +160,21 @@ BEGIN
   );
 
   
+  rd_addr_delay_process : process(clk)
+  begin
+    if clk'event and clk = '1' then
+        if reset = '1' then
+            rd_addr_d1 <= (others => '0');
+            rd_addr_d2 <= (others => '0');
+            rd_addr_d3 <= (others => '0');
+        elsif enb = '1' then
+            rd_addr_d1 <= rd_addr;
+            rd_addr_d2 <= rd_addr_d1;
+            rd_addr_d3 <= rd_addr_d2;
+        end if;
+    end if;
+  end process;
+  
   we_delay_process : process(clk)
   begin
     if clk'event and clk = '1' then
@@ -161,9 +191,17 @@ BEGIN
   begin
     if clk'event and clk = '1' then
       if reset = '1' then
+        --dout_i1_single <= (others => '0');
+        --dout_q1_single <= (others => '0');
+        --dout_i2_single <= (others => '0');
+        --dout_q2_single <= (others => '0');
         dout_i <= (others => (others => '0'));
         dout_q <= (others => (others => '0'));
       elsif enb = '1' then
+        --dout_i1_single <= douta_i1((15+16*addr_lsb) downto (16*addr_lsb));
+        --dout_q1_single <= douta_q1((15+16*addr_lsb) downto (16*addr_lsb));
+        --dout_i2_single <= douta_i2((15+16*addr_lsb) downto (16*addr_lsb));
+        --dout_q2_single <= douta_q2((15+16*addr_lsb) downto (16*addr_lsb));
         for i in 0 to 31 loop
           if i < shift_i then
             dout_i(i) <= doutb_i1((15+16*i) downto (16*i));

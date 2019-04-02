@@ -75,7 +75,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_rx_gs_mult IS
     
     
     
-  constant MCNT_END:    integer := 4096/NDSP-1;
+  constant MCNT_END:    integer := 4096/NDSP;
   constant SCNT_END:    unsigned(15 downto 0) := to_unsigned(NSUM, 16)-1;
   
   signal cs:            std_logic_vector(3 downto 0);               -- fsm current state

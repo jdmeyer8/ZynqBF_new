@@ -84,6 +84,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_ch_est2 IS
   -- dot product signals
   signal dp_start                           : std_logic;
   signal dp_en                              : std_logic;
+  signal dp_en_d1                           : std_logic;
   signal dp_last                            : std_logic;
   signal dp_done                            : std_logic;
   signal dp_done_reg                        : unsigned(0 to 5);
@@ -256,13 +257,24 @@ BEGIN
         end if;
     end process;
     
+    dp_en_delay : process(clk)
+    begin
+        if clk'event and clk = '1' then
+            if reset = '1' then
+                dp_en_d1 <= '0';
+            elsif enb = '1' then
+                dp_en_d1 <= dp_en;
+            end if;
+        end if;
+    end process;
+    
     dotproduct_counter : process(clk)
     begin
         if clk'event and clk = '1' then
             if reset = '1' then
                 dp_count <= (others => '0');
             elsif enb = '1' then
-                if dp_en = '1' then
+                if dp_en_d1 = '1' then
                     dp_count <= dp_count + 1;
                 else
                     dp_count <= (others => '0');
