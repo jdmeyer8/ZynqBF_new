@@ -34,8 +34,8 @@ ENTITY ZynqBF_2t_ip_src_ch_est2 IS
         rx_addr                           :   IN    std_logic_vector(14 downto 0);
         gs_addr_msb                       :   OUT   std_logic_vector(5 downto 0);
         gs_addr_lsb                       :   OUT   std_logic_vector(5 downto 0);
-        ch_i                              :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-        ch_q                              :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
+        ch_i                              :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch_q                              :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
         done                              :   OUT   std_logic
         );
 END ZynqBF_2t_ip_src_ch_est2;
@@ -78,58 +78,62 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_ch_est2 IS
   signal a, b, c, d                         : std_logic_vector(15 downto 0);
   signal macc_ac, macc_bd                   : std_logic_vector(31 downto 0);
   signal macc_ad, macc_bc                   : std_logic_vector(31 downto 0);
-  signal macc_aa, macc_bb                   : std_logic_vector(31 downto 0);
+  signal macc_en                            : std_logic;
   signal sum_aabb                           : signed(31 downto 0);
   
   -- dot product signals
   signal dp_start                           : std_logic;
   signal dp_en                              : std_logic;
-  signal dp_en_d1                           : std_logic;
+  signal dp_en_dreg                         : std_logic_vector(5 downto 0);
   signal dp_last                            : std_logic;
   signal dp_done                            : std_logic;
-  signal dp_done_reg                        : unsigned(0 to 5);
+  signal dp_done_reg                        : unsigned(0 to 3);
   signal dp_count                           : unsigned(11 downto 0);
-  
-  -- newton-raphson signals
-  signal nr_done                            : std_logic;
-  signal nr_dout                            : std_logic_vector(31 downto 0);
-  signal nr_signed                          : signed(31 downto 0);
+  signal dp_count_dreg                      : vector_of_unsigned12(5 downto 0);
   
   -- state machine signals
-  signal cs_est                             : std_logic_vector(3 downto 0);
-  constant s_wait                           : std_logic_vector(3 downto 0) := "0001";
-  constant s_dp                             : std_logic_vector(3 downto 0) := "0010";
-  constant s_nr                             : std_logic_vector(3 downto 0) := "0100";
-  constant s_done                           : std_logic_vector(3 downto 0) := "1000";
+  signal cs_est                             : std_logic_vector(7 downto 0);
+  constant s_wait                           : std_logic_vector(7 downto 0) := "00000001";   -- wait for 'start' signal
+  constant s_hold                           : std_logic_vector(7 downto 0) := "00000010";   -- hold until base_addr is reached
+  constant s_dp                             : std_logic_vector(7 downto 0) := "00000100";   -- calculate dot product state
+  constant s_calc                           : std_logic_vector(7 downto 0) := "00001000";   -- additional calculations needed (AC+BD, BC-AD, multiplications
+  constant s_done                           : std_logic_vector(7 downto 0) := "00010000";   -- output channel estimation and reset
   
+  -- miscellaneous
+  signal rx_addr_i                          : unsigned(14 downto 0);
+  signal base_addr_i                        : unsigned(14 downto 0);
+  
+  --constant INV_A2_B2                        : signed(31 downto 0) := x"00000083";           -- multiply by 0.002
 
 BEGIN
     
     done <= '1' when cs_est = s_done else '0';
-    nr_signed <= signed(nr_dout);
     gs_addr_msb <= std_logic_vector(dp_count(11 downto 6));
     gs_addr_lsb <= std_logic_vector(dp_count(5 downto 0));
     dp_start <= '1' when cs_est = s_wait and en = '1' else '0';
     dp_en <= '1' when cs_est = s_dp else '0';
-    dp_last <= '1' when cs_est = s_dp and dp_count = to_unsigned(16#0fff#, dp_count'high+1) else '0';
+    dp_last <= '1' when cs_est = s_dp and dp_count_dreg(2) = to_unsigned(16#0fff#, dp_count'high+1) else '0';
     dp_done <= '1' when dp_done_reg > to_unsigned(16#0#, dp_done_reg'high+1) else '0';
+    rx_addr_i <= unsigned(rx_addr);
+    base_addr_i <= unsigned(base_addr);
+    macc_en <= dp_en_dreg(2);
     
-    u_nr_reciprocal : ZynqBF_2t_ip_src_nr_reciprocal
-    PORT MAP( clk => clk,
-              reset => reset,
-              enb => enb,
-              din => std_logic_vector(sum_aabb),
-              start => dp_done,
-              dout => nr_dout,
-              valid => nr_done
-              );
+--    u_nr_reciprocal : ZynqBF_2t_ip_src_nr_reciprocal
+--    PORT MAP( clk => clk,
+--              reset => reset,
+--              enb => enb,
+--              din => std_logic_vector(sum_aabb),
+--              start => dp_done,
+--              dout => nr_dout,
+--              valid => nr_done
+--              );
               
    ac_macc_inst : ZynqBF_2t_ip_src_ch_est_mac
    PORT MAP( clk => clk,
              reset => reset,
              enb => enb,
              start => dp_start,
-             en => dp_en,
+             en => macc_en,
              last => dp_last, 
              din1 => a,
              din2 => c,
@@ -142,7 +146,7 @@ BEGIN
              reset => reset,
              enb => enb,
              start => dp_start,
-             en => dp_en,
+             en => macc_en,
              last => dp_last, 
              din1 => b,
              din2 => d,
@@ -155,7 +159,7 @@ BEGIN
              reset => reset,
              enb => enb,
              start => dp_start,
-             en => dp_en,
+             en => macc_en,
              last => dp_last, 
              din1 => a,
              din2 => d,
@@ -168,7 +172,7 @@ BEGIN
              reset => reset,
              enb => enb,
              start => dp_start,
-             en => dp_en,
+             en => macc_en,
              last => dp_last, 
              din1 => b,
              din2 => c,
@@ -176,31 +180,31 @@ BEGIN
              dout => macc_bc
              );
              
-   aa_macc_inst : ZynqBF_2t_ip_src_ch_est_mac
-   PORT MAP( clk => clk,
-             reset => reset,
-             enb => enb,
-             start => dp_start,
-             en => dp_en,
-             last => dp_last, 
-             din1 => a,
-             din2 => a,
-             ready => dp_done_reg(4),
-             dout => macc_aa
-             );
+--   aa_macc_inst : ZynqBF_2t_ip_src_ch_est_mac
+--   PORT MAP( clk => clk,
+--             reset => reset,
+--             enb => enb,
+--             start => dp_start,
+--             en => macc_en,
+--             last => dp_last, 
+--             din1 => a,
+--             din2 => a,
+--             ready => dp_done_reg(4),
+--             dout => macc_aa
+--             );
              
-   bb_macc_inst : ZynqBF_2t_ip_src_ch_est_mac
-   PORT MAP( clk => clk,
-             reset => reset,
-             enb => enb,
-             start => dp_start,
-             en => dp_en,
-             last => dp_last, 
-             din1 => b,
-             din2 => b,
-             ready => dp_done_reg(5),
-             dout => macc_bb
-             );         
+--   bb_macc_inst : ZynqBF_2t_ip_src_ch_est_mac
+--   PORT MAP( clk => clk,
+--             reset => reset,
+--             enb => enb,
+--             start => dp_start,
+--             en => macc_en,
+--             last => dp_last, 
+--             din1 => b,
+--             din2 => b,
+--             ready => dp_done_reg(5),
+--             dout => macc_bb
+--             );         
               
 
     register_inputs: process(clk)
@@ -232,22 +236,28 @@ BEGIN
                     when s_wait =>
                         --if en = '1' then
                         if start = '1' then
-                            cs_est <= s_dp;
+                            cs_est <= s_hold;
                         else
                             cs_est <= s_wait;
                         end if;
+                    when s_hold =>
+                        if rx_addr_i >= base_addr_i then
+                            cs_est <= s_dp;
+                        else
+                            cs_est <= s_hold;
+                        end if;
                     when s_dp =>
                         if dp_done_reg > to_unsigned(16#0#, dp_done_reg'high+1) then
-                            cs_est <= s_nr;
+                            cs_est <= s_calc;
                         else
                             cs_est <= s_dp;
                         end if;
-                    when s_nr =>
-                        if nr_done = '1' then
+                    when s_calc =>
+                        --if nr_done = '1' then
                             cs_est <= s_done;
-                        else
-                            cs_est <= s_nr;
-                        end if;
+                        --else
+                        --    cs_est <= s_calc;
+                        --end if;
                     when s_done =>
                         cs_est <= s_wait;
                     when others =>
@@ -257,16 +267,19 @@ BEGIN
         end if;
     end process;
     
-    dp_en_delay : process(clk)
+    dp_delays : process(clk)
     begin
         if clk'event and clk = '1' then
             if reset = '1' then
-                dp_en_d1 <= '0';
+                dp_en_dreg <= (others => '0');
+                dp_count_dreg <= (others => (others => '0'));
             elsif enb = '1' then
-                dp_en_d1 <= dp_en;
+                dp_en_dreg <= dp_en_dreg(dp_en_dreg'high-1 downto 0) & dp_en;
+                dp_count_dreg <= dp_count_dreg(dp_count_dreg'high-1 downto 0) & dp_count;
             end if;
         end if;
     end process;
+    
     
     dotproduct_counter : process(clk)
     begin
@@ -274,10 +287,25 @@ BEGIN
             if reset = '1' then
                 dp_count <= (others => '0');
             elsif enb = '1' then
-                if dp_en_d1 = '1' then
+                if dp_en = '1' then
                     dp_count <= dp_count + 1;
                 else
                     dp_count <= (others => '0');
+                end if;
+            end if;
+        end if;
+    end process;
+    
+    register_outputs : process(clk)
+    begin
+        if clk'event and clk = '1' then
+            if reset = '1' then
+                ch_i <= (others => '0');
+                ch_q <= (others => '0');
+            elsif enb = '1' then
+                if dp_done = '1' then
+                    ch_i <= std_logic_vector(signed(macc_ac) + signed(macc_bd));
+                    ch_q <= std_logic_vector(signed(macc_ad) - signed(macc_bc));
                 end if;
             end if;
         end if;

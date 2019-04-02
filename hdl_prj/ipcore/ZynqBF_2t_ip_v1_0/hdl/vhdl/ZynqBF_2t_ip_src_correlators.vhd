@@ -36,6 +36,9 @@ ENTITY ZynqBF_2t_ip_src_correlators IS
         step                              :   OUT   std_logic;
         peak_found                        :   OUT   std_logic;
         est_val                           :   OUT   std_logic;                      -- valid signal for ch_est input
+        ch_i                              :   OUT   vector_of_std_logic_vector32(0 to (NCORR-1));
+        ch_q                              :   OUT   vector_of_std_logic_vector32(0 to (NCORR-1));
+        ch_update                         :   OUT   std_logic;
         probe                             :   OUT   std_logic_vector(31 DOWNTO 0)  -- sfix32_En16
         );
 END ZynqBF_2t_ip_src_correlators;
@@ -155,36 +158,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   FOR ALL : ZynqBF_2t_ip_src_ch_est2
     USE ENTITY work.ZynqBF_2t_ip_src_ch_est2(rtl);
 
-  -- Signals
-  SIGNAL addr_unsigned                    : unsigned(14 DOWNTO 0);  -- ufix15
-  SIGNAL Delay9_reg                       : vector_of_unsigned15(0 TO 1);  -- ufix15 [2]
-  SIGNAL Delay9_out1                      : unsigned(14 DOWNTO 0);  -- ufix15
-  SIGNAL Add1_sub_temp                    : signed(16 DOWNTO 0);  -- sfix17
-  SIGNAL Add1_out1                        : signed(15 DOWNTO 0);  -- int16
-  SIGNAL index_in                         : signed(15 DOWNTO 0);  -- int16
-  SIGNAL corr_vout                        : std_logic_vector(31 DOWNTO 0);  -- ufix32
-  SIGNAL correlator1_out2                 : std_logic;
-  SIGNAL correlator1_out3                 : std_logic;
-  SIGNAL corr_vout_signed                 : signed(31 DOWNTO 0);  -- sfix32_En16
-  SIGNAL Delay4_out1                      : signed(31 DOWNTO 0);  -- sfix32_En16
-  SIGNAL Compare_To_Constant_out1         : std_logic;
-  SIGNAL peak_fsm_out1                    : std_logic;
-  SIGNAL Logical_Operator5_out1           : std_logic;
-  SIGNAL count_20_steps_out1              : unsigned(7 DOWNTO 0);  -- uint8
-  SIGNAL Compare_To_Constant1_out1        : std_logic;
-  SIGNAL Logical_Operator7_out1           : std_logic;
-  SIGNAL peak_fsm_out2                    : std_logic;
-  -- SIGNAL update_index                     : std_logic;
-  SIGNAL running_max_out2                 : std_logic_vector(31 DOWNTO 0);  -- ufix32
-  SIGNAL stored_index                     : std_logic_vector(15 DOWNTO 0);  -- ufix16
-  SIGNAL stored_index_signed              : signed(15 DOWNTO 0);  -- int16
-  SIGNAL Data_Type_Conversion_out1        : unsigned(14 DOWNTO 0);  -- ufix15
-  SIGNAL Delay10_out1                     : unsigned(14 DOWNTO 0);  -- ufix15
-  SIGNAL Logical_Operator3_out1           : std_logic;
-  SIGNAL Logical_Operator2_out1           : std_logic;
-  SIGNAL Delay3_out1                      : std_logic;
-  SIGNAL Delay6_out1                      : std_logic;
-  
+  -- Signals  
   signal rxi                              : vector_of_std_logic_vector16(0 to 63);
   signal rxq                              : vector_of_std_logic_vector16(0 to 63);
   signal gsdata                           : vector_of_std_logic_vector16(0 to (64*NCORR - 1));
@@ -193,6 +167,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   signal rxi_shifted                      : vector_of_std_logic_vector16(0 to 63);
   signal rxq_shifted                      : vector_of_std_logic_vector16(0 to 63);
   
+  signal rx_ram_we                        : std_logic;
   signal rxi_single                       : std_logic_vector(15 downto 0);
   signal rxq_single                       : std_logic_vector(15 downto 0);
   signal gsi_single                       : vector_of_std_logic_vector16(0 to (NCORR-1));
@@ -289,6 +264,7 @@ BEGIN
   pd_rxaddr <= std_logic_vector(corr_cnt + corr_base);
   pd_gsaddr <= std_logic_vector(corr_cnt(11 downto 6));
   
+  rx_ram_we <= vin when ch_est_en_reg = to_unsigned(16#0#, NCORR) else '0';
   rx_ram_rdaddr <= std_logic_vector(ch_est_rxaddr) when ch_est_en = '1' else pd_rxaddr;
   rx_ram_shift <= std_logic_vector(shift_cnt) when ch_est_en = '1' else std_logic_vector(corr_shift);
   gs_ram_rdaddr_msb <= ch_est_gsaddr_msb when ch_est_en = '1' else (others => pd_gsaddr);
@@ -296,6 +272,8 @@ BEGIN
   
   ch_est_start <= '1' when ch_est_start_reg > to_unsigned(16#0#, NCORR) else '0';
   ch_est_en <= '1' when ch_est_en_reg > to_unsigned(16#0#, NCORR) else '0';
+  
+  ch_update <= '1' when cs_main = s_reset else '0';
 
   u_rx_bram : ZynqBF_2t_ip_src_rx_bram
     PORT MAP( clk => clk,
@@ -437,6 +415,8 @@ BEGIN
   
   rx_ram_wraddr <= std_logic_vector(rx_in_addr + "000111111111111");
   
+  
+  -- CORRELATOR CONTROLS
   correlation_enable_process : process(clk)
   begin
     if clk'event and clk = '1' then
@@ -503,6 +483,8 @@ BEGIN
     end if;
   end process;
   
+  
+  -- PEAK TRACKING CONTROLS
   detect_threshold_crossing : process(clk)
   begin
     if clk'event and clk = '1' then
@@ -632,6 +614,7 @@ BEGIN
     end if;
   end process;
   
+  -- MAIN FSM
   main_fsm : process(clk)
   begin
     if clk'event and clk = '1' then
@@ -674,6 +657,8 @@ BEGIN
     end if;
   end process;
   
+  
+  -- CHANNEL ESTIMATOR CONTROLS
   channel_estimate_start : process(clk)
   begin
     if clk'event and clk = '1' then
@@ -724,129 +709,6 @@ BEGIN
         end if;
     end if;
   end process;
-  
-
-  Delay9_process : PROCESS (clk)
-  BEGIN
-    IF clk'EVENT AND clk = '1' THEN
-      IF reset = '1' THEN
-        Delay9_reg <= (OTHERS => to_unsigned(16#0000#, 15));
-      ELSIF enb = '1' THEN
-        Delay9_reg(0) <= addr_unsigned;
-        Delay9_reg(1) <= Delay9_reg(0);
-      END IF;
-    END IF;
-  END PROCESS Delay9_process;
-
-  Delay9_out1 <= Delay9_reg(1);
-
-  Add1_sub_temp <= signed(resize(Delay9_out1, 17)) - to_signed(16#01000#, 17);
-  Add1_out1 <= Add1_sub_temp(15 DOWNTO 0);
-
-  Delay11_process : PROCESS (clk)
-  BEGIN
-    IF clk'EVENT AND clk = '1' THEN
-      IF reset = '1' THEN
-        index_in <= to_signed(16#0000#, 16);
-      ELSIF enb = '1' THEN
-        index_in <= Add1_out1;
-      END IF;
-    END IF;
-  END PROCESS Delay11_process;
-
-
-  corr_vout_signed <= signed(corr_vout);
-
-  Delay4_process : PROCESS (clk)
-  BEGIN
-    IF clk'EVENT AND clk = '1' THEN
-      IF reset = '1' THEN
-        Delay4_out1 <= to_signed(0, 32);
-      ELSIF enb = '1' THEN
-        Delay4_out1 <= corr_vout_signed;
-      END IF;
-    END IF;
-  END PROCESS Delay4_process;
-
-
-  
-  Compare_To_Constant_out1 <= '1' WHEN corr_vout_signed >= to_signed(6553600, 32) ELSE
-      '0';
-
-  Logical_Operator5_out1 <= correlator1_out3 AND peak_fsm_out1;
-
-  -- Count limited, Unsigned Counter
-  --  initial value   = 0
-  --  step value      = 1
-  --  count to value  = 20
-  count_20_steps_process : PROCESS (clk)
-  BEGIN
-    IF clk'EVENT AND clk = '1' THEN
-      IF reset = '1' THEN
-        count_20_steps_out1 <= to_unsigned(16#00#, 8);
-      ELSIF enb = '1' THEN
-        IF Logical_Operator5_out1 = '1' THEN 
-          IF count_20_steps_out1 >= to_unsigned(16#14#, 8) THEN 
-            count_20_steps_out1 <= to_unsigned(16#00#, 8);
-          ELSE 
-            count_20_steps_out1 <= count_20_steps_out1 + to_unsigned(16#01#, 8);
-          END IF;
-        END IF;
-      END IF;
-    END IF;
-  END PROCESS count_20_steps_process;
-
-
-  
-  Compare_To_Constant1_out1 <= '1' WHEN count_20_steps_out1 = to_unsigned(16#14#, 8) ELSE
-      '0';
-
-  Logical_Operator7_out1 <= correlator1_out3 AND Compare_To_Constant1_out1;
-
-  stored_index_signed <= signed(stored_index);
-
-  Data_Type_Conversion_out1 <= unsigned(stored_index_signed(14 DOWNTO 0));
-
-  Delay10_process : PROCESS (clk)
-  BEGIN
-    IF clk'EVENT AND clk = '1' THEN
-      IF reset = '1' THEN
-        Delay10_out1 <= to_unsigned(16#0000#, 15);
-      ELSIF enb = '1' THEN
-        Delay10_out1 <= Data_Type_Conversion_out1;
-      END IF;
-    END IF;
-  END PROCESS Delay10_process;
-
-
-  index <= std_logic_vector(Delay10_out1);
-
-  Logical_Operator3_out1 <=  NOT Compare_To_Constant1_out1;
-
-  Logical_Operator2_out1 <= correlator1_out3 AND Logical_Operator3_out1;
-
-  Delay3_process : PROCESS (clk)
-  BEGIN
-    IF clk'EVENT AND clk = '1' THEN
-      IF reset = '1' THEN
-        Delay3_out1 <= '0';
-      ELSIF enb = '1' THEN
-        Delay3_out1 <= Logical_Operator2_out1;
-      END IF;
-    END IF;
-  END PROCESS Delay3_process;
-
-
-  Delay6_process : PROCESS (clk)
-  BEGIN
-    IF clk'EVENT AND clk = '1' THEN
-      IF reset = '1' THEN
-        Delay6_out1 <= '0';
-      ELSIF enb = '1' THEN
-        Delay6_out1 <= Logical_Operator7_out1;
-      END IF;
-    END IF;
-  END PROCESS Delay6_process;
 
 END rtl;
 

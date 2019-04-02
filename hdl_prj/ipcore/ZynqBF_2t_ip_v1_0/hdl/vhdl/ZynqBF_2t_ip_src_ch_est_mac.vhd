@@ -40,6 +40,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_ch_est_mac IS
     signal macc_a, macc_b                   : signed(15 downto 0);
     signal macc_m                           : signed(31 downto 0);
     signal macc_c, macc_p                   : signed(47 downto 0);
+    signal macc_p_trunc                     : signed(45 downto 0);
     
     signal en_dreg                          : std_logic_vector(2 downto 0);
     signal en_d1, en_d2, en_d3              : std_logic;
@@ -48,6 +49,13 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_ch_est_mac IS
     
 BEGIN
 
+    en_d1 <= en_dreg(0);
+    en_d2 <= en_dreg(1);
+    en_d3 <= en_dreg(2);
+    ready <= last_dreg(3);
+    macc_c <= macc_p;
+    macc_p_trunc <= resize(macc_p,46);
+    
     en_delay : process(clk)
     begin
         if clk'event and clk = '1' then
@@ -59,9 +67,6 @@ BEGIN
         end if;
     end process;
     
-    en_d1 <= en_dreg(0);
-    en_d2 <= en_dreg(1);
-    en_d3 <= en_dreg(2);
     
     last_delay : process(clk)
     begin
@@ -74,8 +79,7 @@ BEGIN
         end if;
     end process;
     
-    ready <= last_dreg(3);
-
+    
     register_inputs : process(clk)
     begin
         if clk'event and clk = '1' then
@@ -94,6 +98,7 @@ BEGIN
         end if;
     end process;
     
+    
     calc_mult : process(clk)
     begin
         if clk'event and clk = '1' then
@@ -105,7 +110,6 @@ BEGIN
         end if;
     end process;
     
-    macc_c <= macc_p;
     
     register_p : process(clk)
     begin
@@ -114,6 +118,18 @@ BEGIN
                 macc_p <= (others => '0');
             elsif enb = '1' and en_d2 = '1' then
                 macc_p <= resize(macc_m, 48) + macc_c;
+            end if;
+        end if;
+    end process;
+    
+    
+    register_dout : process(clk)
+    begin
+        if clk'event and clk = '1' then
+            if reset = '1' then
+                dout <= (others => '0');
+            elsif enb = '1' and last_dreg(2) = '1' then
+                dout <= std_logic_vector(macc_p_trunc(45 downto 14));
             end if;
         end if;
     end process;

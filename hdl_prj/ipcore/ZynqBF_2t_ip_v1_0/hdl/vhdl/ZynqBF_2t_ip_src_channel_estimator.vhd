@@ -33,10 +33,16 @@ ENTITY ZynqBF_2t_ip_src_channel_estimator IS
         rx_i                              :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
         rx_q                              :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
         rx_v                              :   IN    std_logic;
-        ch1_i                             :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-        ch1_q                             :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-        ch2_i                             :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-        ch2_q                             :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
+        ch1_i                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch1_q                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch2_i                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch2_q                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch3_i                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch3_q                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch4_i                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch4_q                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch5_i                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch5_q                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
         probe_xcorr1                      :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix32_En16
         probe_xcorr2                      :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix32_En16
         probe_state                       :   OUT   std_logic_vector(7 DOWNTO 0);  -- uint8
