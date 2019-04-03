@@ -28,7 +28,7 @@ use UNIMACRO.vcomponents.all;
 
 ENTITY ZynqBF_2t_ip_src_rx_gs_mult_core IS
   GENERIC( NDSP                           :   integer := 64;    -- number of DSPs to use for multiply-accumulate (real number will be 2x because I and Q)
-           SCNT_END                       :   integer := 5      -- sum count end value
+           SCNT_END                       :   integer := 7      -- sum count end value
         );   
   PORT( clk                               :   IN    std_logic;
         reset                             :   IN    std_logic;
@@ -54,12 +54,14 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_rx_gs_mult_core IS
   signal macc1_b:               vector_of_signed16(0 to (NDSP-1));
   signal macc1_c:               vector_of_signed48(0 to (NDSP-1));
   signal macc1_m:               vector_of_signed32(0 to (NDSP-1));
+  signal macc1_sum:             signed(47 downto 0);
   
   signal macc2_p:               vector_of_signed48(0 to (NDSP-1));
   signal macc2_a:               vector_of_signed16(0 to (NDSP-1));
   signal macc2_b:               vector_of_signed16(0 to (NDSP-1));
   signal macc2_c:               vector_of_signed48(0 to (NDSP-1));
   signal macc2_m:               vector_of_signed32(0 to (NDSP-1));
+  signal macc2_sum:             signed(47 downto 0);
   
   -- enable delays
   signal men_dreg:              std_logic_vector(2 downto 0);
@@ -67,6 +69,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_rx_gs_mult_core IS
   signal men_d2:                std_logic;
   signal men_d3:                std_logic;
   
+  signal scnt_i:                integer range 0 to 7;
   signal sum_sel:               integer range 0 to 7;
   signal sum_shift:             integer range 0 to 128;
   
@@ -84,8 +87,11 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_rx_gs_mult_core IS
   signal dout1:                 signed(31 downto 0);
   signal dout2:                 signed(31 downto 0);
   
+  constant NSUM:                integer range 0 to 255 := NDSP/(SCNT_END+1);
+  
 BEGIN
 
+  scnt_i <= to_integer(unsigned(scnt_d2));
   sum_sel <= SCNT_END - to_integer(unsigned(scnt_d2));
   
   with sum_sel select sum_shift <=
@@ -168,13 +174,13 @@ BEGIN
                 macc1_p(i) <= resize(macc1_m(i),48) + macc1_c(i);
                 macc2_p(i) <= resize(macc2_m(i),48) + macc2_c(i);
             end loop;
-        elsif sen_d2 = '1' then
-            for i in 0 to (NDSP-1) loop
-                if i < sum_shift then
-                    macc1_p(i) <= macc1_p(i) + macc1_p(i+sum_shift);
-                    macc2_p(i) <= macc2_p(i) + macc2_p(i+sum_shift);
-                end if;
-            end loop;
+        --elsif sen_d2 = '1' then
+        --    for i in 0 to (NDSP-1) loop
+        --        if i < sum_shift then
+        --            macc1_p(i) <= macc1_p(i) + macc1_p(i+sum_shift);
+        --            macc2_p(i) <= macc2_p(i) + macc2_p(i+sum_shift);
+        --        end if;
+        --    end loop;
         elsif men_d2 = '0' and sen_dreg = "000" then
             for i in 0 to (NDSP-1) loop
                 macc1_p(i) <= (others => '0');
@@ -183,6 +189,33 @@ BEGIN
         end if;
     end if;
   end process;
+  
+  sum_process : process(clk)
+    variable sum_macc1_i : signed(47 downto 0);
+    variable sum_macc2_i : signed(47 downto 0);
+  begin
+    sum_macc1_i := (others => '0');
+    sum_macc2_i := (others => '0');
+    if clk'event and clk = '1' then
+        if reset = '1' then
+            macc1_sum <= (others => '0');
+            macc2_sum <= (others => '0');
+        elsif enb = '1' then
+            if men_d2 = '1' then
+                macc1_sum <= (others => '0');
+                macc2_sum <= (others => '0');
+            elsif sen_d2 = '1' then
+                for i in 0 to (NSUM-1) loop
+                    sum_macc1_i := sum_macc1_i + macc1_p(NSUM*scnt_i + i);
+                    sum_macc2_i := sum_macc2_i + macc2_p(NSUM*scnt_i + i);
+                end loop;
+                macc1_sum <= macc1_sum + sum_macc1_i;
+                macc2_sum <= macc2_sum + sum_macc2_i;
+            end if;
+        end if;
+    end if;
+  end process;
+            
   
   enable_delay_process : process(clk)
   begin
@@ -229,8 +262,8 @@ BEGIN
             dout2 <= x"00000000";
         elsif enb = '1' and unsigned(scnt_d3) >= to_unsigned(SCNT_END,16) then
             done_i <= '1';
-            dout1 <= macc1_p(0)(45 downto 14);
-            dout2 <= macc2_p(0)(45 downto 14);
+            dout1 <= macc1_sum(45 downto 14);
+            dout2 <= macc2_sum(45 downto 14);
         else
             done_i <= '0';
             dout1 <= dout1;

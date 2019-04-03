@@ -31,7 +31,7 @@ use UNIMACRO.vcomponents.all;
 ENTITY ZynqBF_2t_ip_src_rx_gs_mult IS
   GENERIC( N                              :   integer := 2;     -- number of channels
            NDSP                           :   integer := 64;    -- number of DSPs to use for multiply-accumulate
-           NSUM                           :   integer := 6      -- log2 of NDSP
+           NSUM                           :   integer := 8      -- log2 of NDSP
         );
   PORT( clk                               :   IN    std_logic;
         reset                             :   IN    std_logic;
