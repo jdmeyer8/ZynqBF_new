@@ -77,10 +77,16 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip IS
           AXI4_Lite_ARVALID               :   IN    std_logic;  -- ufix1
           AXI4_Lite_RREADY                :   IN    std_logic;  -- ufix1
           read_ip_timestamp               :   IN    std_logic_vector(31 DOWNTO 0);  -- ufix32
-          read_ch1_i                      :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-          read_ch1_q                      :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-          read_ch2_i                      :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-          read_ch2_q                      :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
+          read_ch1_i                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch1_q                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch2_i                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch2_q                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch3_i                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch3_q                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch4_i                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch4_q                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch5_i                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch5_q                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
           AXI4_Lite_AWREADY               :   OUT   std_logic;  -- ufix1
           AXI4_Lite_WREADY                :   OUT   std_logic;  -- ufix1
           AXI4_Lite_BRESP                 :   OUT   std_logic_vector(1 DOWNTO 0);  -- ufix2
@@ -108,10 +114,16 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip IS
           rx_i_out                        :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
           rx_q_out                        :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
           rx_v_out                        :   OUT   std_logic;  -- ufix1
-          ch1_i                           :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-          ch1_q                           :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-          ch2_i                           :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-          ch2_q                           :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
+          ch1_i                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch1_q                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch2_i                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch2_q                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch3_i                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch3_q                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch4_i                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch4_q                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch5_i                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch5_q                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
           probe                           :   OUT   std_logic_vector(14 DOWNTO 0);  -- ufix15
           probe_xcorr1                    :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix32_En16
           probe_xcorr2                    :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix32_En16
@@ -139,10 +151,16 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip IS
   SIGNAL baseband_rx0Q_in_unsigned        : unsigned(15 DOWNTO 0);  -- ufix16
   SIGNAL rx_q_in_sig                      : signed(15 DOWNTO 0);  -- sfix16_En15
   SIGNAL reset_internal                   : std_logic;  -- ufix1
-  SIGNAL ch1_i_sig                        : std_logic_vector(15 DOWNTO 0);  -- ufix16
-  SIGNAL ch1_q_sig                        : std_logic_vector(15 DOWNTO 0);  -- ufix16
-  SIGNAL ch2_i_sig                        : std_logic_vector(15 DOWNTO 0);  -- ufix16
-  SIGNAL ch2_q_sig                        : std_logic_vector(15 DOWNTO 0);  -- ufix16
+  SIGNAL ch1_i_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
+  SIGNAL ch1_q_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
+  SIGNAL ch2_i_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
+  SIGNAL ch2_q_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16  
+  SIGNAL ch3_i_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
+  SIGNAL ch3_q_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
+  SIGNAL ch4_i_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
+  SIGNAL ch4_q_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
+  SIGNAL ch5_i_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
+  SIGNAL ch5_q_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
   SIGNAL AXI4_Lite_BRESP_tmp              : std_logic_vector(1 DOWNTO 0);  -- ufix2
   SIGNAL AXI4_Lite_RDATA_tmp              : std_logic_vector(31 DOWNTO 0);  -- ufix32
   SIGNAL AXI4_Lite_RRESP_tmp              : std_logic_vector(1 DOWNTO 0);  -- ufix2
@@ -183,6 +201,12 @@ BEGIN
               read_ch1_q => ch1_q_sig,  -- sfix16_En15
               read_ch2_i => ch2_i_sig,  -- sfix16_En15
               read_ch2_q => ch2_q_sig,  -- sfix16_En15
+              read_ch3_i => ch3_i_sig,  -- sfix16_En15
+              read_ch3_q => ch3_q_sig,  -- sfix16_En15
+              read_ch4_i => ch4_i_sig,  -- sfix16_En15
+              read_ch4_q => ch4_q_sig,  -- sfix16_En15
+              read_ch5_i => ch5_i_sig,  -- sfix16_En15
+              read_ch5_q => ch5_q_sig,  -- sfix16_En15
               AXI4_Lite_AWREADY => AXI4_Lite_AWREADY,  -- ufix1
               AXI4_Lite_WREADY => AXI4_Lite_WREADY,  -- ufix1
               AXI4_Lite_BRESP => AXI4_Lite_BRESP_tmp,  -- ufix2
@@ -213,6 +237,12 @@ BEGIN
               ch1_q => ch1_q_sig,  -- sfix16_En15
               ch2_i => ch2_i_sig,  -- sfix16_En15
               ch2_q => ch2_q_sig,  -- sfix16_En15
+              ch3_i => ch3_i_sig,  -- sfix16_En15
+              ch3_q => ch3_q_sig,  -- sfix16_En15
+              ch4_i => ch4_i_sig,  -- sfix16_En15
+              ch4_q => ch4_q_sig,  -- sfix16_En15
+              ch5_i => ch5_i_sig,  -- sfix16_En15
+              ch5_q => ch5_q_sig,  -- sfix16_En15
               probe => probe_sig,  -- ufix15
               probe_xcorr1 => probe_xcorr1_sig,  -- sfix32_En16
               probe_xcorr2 => probe_xcorr2_sig,  -- sfix32_En16

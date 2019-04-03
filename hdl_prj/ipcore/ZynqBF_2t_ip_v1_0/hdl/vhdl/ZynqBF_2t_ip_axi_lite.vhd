@@ -33,10 +33,16 @@ ENTITY ZynqBF_2t_ip_axi_lite IS
         AXI4_Lite_ARVALID                 :   IN    std_logic;  -- ufix1
         AXI4_Lite_RREADY                  :   IN    std_logic;  -- ufix1
         read_ip_timestamp                 :   IN    std_logic_vector(31 DOWNTO 0);  -- ufix32
-        read_ch1_i                        :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-        read_ch1_q                        :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-        read_ch2_i                        :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-        read_ch2_q                        :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
+        read_ch1_i                        :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        read_ch1_q                        :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        read_ch2_i                        :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        read_ch2_q                        :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        read_ch3_i                        :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        read_ch3_q                        :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        read_ch4_i                        :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        read_ch4_q                        :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        read_ch5_i                        :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        read_ch5_q                        :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
         AXI4_Lite_AWREADY                 :   OUT   std_logic;  -- ufix1
         AXI4_Lite_WREADY                  :   OUT   std_logic;  -- ufix1
         AXI4_Lite_BRESP                   :   OUT   std_logic_vector(1 DOWNTO 0);  -- ufix2
@@ -62,10 +68,16 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_axi_lite IS
           wr_enb                          :   IN    std_logic;  -- ufix1
           rd_enb                          :   IN    std_logic;  -- ufix1
           read_ip_timestamp               :   IN    std_logic_vector(31 DOWNTO 0);  -- ufix32
-          read_ch1_i                      :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-          read_ch1_q                      :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-          read_ch2_i                      :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-          read_ch2_q                      :   IN    std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
+          read_ch1_i                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch1_q                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch2_i                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch2_q                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch3_i                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch3_q                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch4_i                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch4_q                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch5_i                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          read_ch5_q                      :   IN    std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
           data_read                       :   OUT   std_logic_vector(31 DOWNTO 0);  -- ufix32
           write_axi_enable                :   OUT   std_logic  -- ufix1
           );
@@ -131,6 +143,12 @@ BEGIN
               read_ch1_q => read_ch1_q,  -- sfix16_En15
               read_ch2_i => read_ch2_i,  -- sfix16_En15
               read_ch2_q => read_ch2_q,  -- sfix16_En15
+              read_ch3_i => read_ch3_i,  -- sfix16_En15
+              read_ch3_q => read_ch3_q,  -- sfix16_En15
+              read_ch4_i => read_ch4_i,  -- sfix16_En15
+              read_ch4_q => read_ch4_q,  -- sfix16_En15
+              read_ch5_i => read_ch5_i,  -- sfix16_En15
+              read_ch5_q => read_ch5_q,  -- sfix16_En15
               data_read => top_data_read,  -- ufix32
               write_axi_enable => write_axi_enable  -- ufix1
               );

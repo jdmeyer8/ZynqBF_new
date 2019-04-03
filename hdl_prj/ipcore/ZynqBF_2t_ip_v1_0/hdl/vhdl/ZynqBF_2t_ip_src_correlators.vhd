@@ -31,6 +31,7 @@ ENTITY ZynqBF_2t_ip_src_correlators IS
         din_i                             :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15 [2]
         din_q                             :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15 [2]
         vin                               :   IN    std_logic;                      -- rx ram write enable
+        pd_en                             :   OUT   std_logic;
         est_en                            :   IN    std_logic;
         index                             :   OUT   std_logic_vector(14 DOWNTO 0);  -- ufix15
         step                              :   OUT   std_logic;
@@ -129,8 +130,8 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
         rx_addr                           :   IN    std_logic_vector(14 downto 0);
         gs_addr_msb                       :   OUT   std_logic_vector(5 downto 0);
         gs_addr_lsb                       :   OUT   std_logic_vector(5 downto 0);
-        ch_i                              :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-        ch_q                              :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
+        ch_i                              :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch_q                              :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
         done                              :   OUT   std_logic
         );
   end component;
@@ -196,6 +197,8 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   
   signal pd_rxaddr                        : std_logic_vector(14 downto 0);
   signal pd_gsaddr                        : std_logic_vector(5 downto 0);
+  
+  signal pd_en_reg                        : unsigned(0 to (NCORR-1));
   
   signal corr_shift                       : unsigned(5 downto 0);           -- latch value of shift_cnt at the start of the correlation
   signal corr_cnt                         : unsigned(11 downto 0);          -- correlation counter (and address for gs ram, address offset for rx ram)
@@ -264,6 +267,8 @@ BEGIN
   pd_rxaddr <= std_logic_vector(corr_cnt + corr_base);
   pd_gsaddr <= std_logic_vector(corr_cnt(11 downto 6));
   
+  pd_en <= '1' when pd_en_reg > to_unsigned(16#0#, NCORR) else '0';
+  
   rx_ram_we <= vin when ch_est_en_reg = to_unsigned(16#0#, NCORR) else '0';
   rx_ram_rdaddr <= std_logic_vector(ch_est_rxaddr) when ch_est_en = '1' else pd_rxaddr;
   rx_ram_shift <= std_logic_vector(shift_cnt) when ch_est_en = '1' else std_logic_vector(corr_shift);
@@ -273,7 +278,7 @@ BEGIN
   ch_est_start <= '1' when ch_est_start_reg > to_unsigned(16#0#, NCORR) else '0';
   ch_est_en <= '1' when ch_est_en_reg > to_unsigned(16#0#, NCORR) else '0';
   
-  ch_update <= '1' when cs_main = s_reset else '0';
+  ch_update <= '1' when cs_main(0) = s_reset else '0';
 
   u_rx_bram : ZynqBF_2t_ip_src_rx_bram
     PORT MAP( clk => clk,
@@ -361,8 +366,8 @@ BEGIN
                 rx_addr => std_logic_vector(ch_est_rxaddr),
                 gs_addr_msb => ch_est_gsaddr_msb(i),
                 gs_addr_lsb => ch_est_gsaddr_lsb(i),
-                ch_i => open,
-                ch_q => open,
+                ch_i => ch_i(i),
+                ch_q => ch_q(i),
                 done => ch_est_done(i)
                 );
   end generate;
@@ -479,6 +484,23 @@ BEGIN
                 corr_cnt <= (others => '0');
                 corr_base <= corr_base;
             end if;
+        end if;
+    end if;
+  end process;
+  
+  peak_detect_enable : process(clk)
+  begin
+    if clk'event and clk = '1' then
+        if reset = '1' then
+            pd_en_reg <= (others => '0');
+        elsif enb = '1' then
+            for i in 0 to (NCORR-1) loop
+                if cs_main(i) = s_peakdetect then
+                    pd_en_reg(i) <= '1';
+                else
+                    pd_en_reg(i) <= '0';
+                end if;
+            end loop;
         end if;
     end if;
   end process;

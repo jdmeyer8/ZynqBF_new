@@ -33,10 +33,16 @@ ENTITY ZynqBF_2t_ip_dut IS
         rx_i_out                          :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
         rx_q_out                          :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
         rx_v_out                          :   OUT   std_logic;  -- ufix1
-        ch1_i                             :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-        ch1_q                             :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-        ch2_i                             :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-        ch2_q                             :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
+        ch1_i                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch1_q                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch2_i                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch2_q                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch3_i                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch3_q                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch4_i                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch4_q                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch5_i                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+        ch5_q                             :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
         probe                             :   OUT   std_logic_vector(14 DOWNTO 0);  -- ufix15
         probe_xcorr1                      :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix32_En16
         probe_xcorr2                      :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix32_En16
@@ -65,10 +71,16 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_dut IS
           rx_i_out                        :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
           rx_q_out                        :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
           rx_v_out                        :   OUT   std_logic;  -- ufix1
-          ch1_i                           :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-          ch1_q                           :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-          ch2_i                           :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
-          ch2_q                           :   OUT   std_logic_vector(15 DOWNTO 0);  -- sfix16_En15
+          ch1_i                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch1_q                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch2_i                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch2_q                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch3_i                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch3_q                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch4_i                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch4_q                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch5_i                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
+          ch5_q                           :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
           probe                           :   OUT   std_logic_vector(14 DOWNTO 0);  -- ufix15
           probe_xcorr1                    :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix32_En16
           probe_xcorr2                    :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix32_En16
@@ -91,10 +103,16 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_dut IS
   SIGNAL rx_i_out_sig                     : std_logic_vector(15 DOWNTO 0);  -- ufix16
   SIGNAL rx_q_out_sig                     : std_logic_vector(15 DOWNTO 0);  -- ufix16
   SIGNAL rx_v_out_sig                     : std_logic;  -- ufix1
-  SIGNAL ch1_i_sig                        : std_logic_vector(15 DOWNTO 0);  -- ufix16
-  SIGNAL ch1_q_sig                        : std_logic_vector(15 DOWNTO 0);  -- ufix16
-  SIGNAL ch2_i_sig                        : std_logic_vector(15 DOWNTO 0);  -- ufix16
-  SIGNAL ch2_q_sig                        : std_logic_vector(15 DOWNTO 0);  -- ufix16
+  SIGNAL ch1_i_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
+  SIGNAL ch1_q_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
+  SIGNAL ch2_i_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
+  SIGNAL ch2_q_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
+  SIGNAL ch3_i_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
+  SIGNAL ch3_q_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
+  SIGNAL ch4_i_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
+  SIGNAL ch4_q_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
+  SIGNAL ch5_i_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
+  SIGNAL ch5_q_sig                        : std_logic_vector(31 DOWNTO 0);  -- ufix16
   SIGNAL probe_sig                        : std_logic_vector(14 DOWNTO 0);  -- ufix15
   SIGNAL probe_xcorr1_sig                 : std_logic_vector(31 DOWNTO 0);  -- ufix32
   SIGNAL probe_xcorr2_sig                 : std_logic_vector(31 DOWNTO 0);  -- ufix32
@@ -122,6 +140,12 @@ BEGIN
               ch1_q => ch1_q_sig,  -- sfix16_En15
               ch2_i => ch2_i_sig,  -- sfix16_En15
               ch2_q => ch2_q_sig,  -- sfix16_En15
+              ch3_i => ch3_i_sig,  -- sfix16_En15
+              ch3_q => ch3_q_sig,  -- sfix16_En15
+              ch4_i => ch4_i_sig,  -- sfix16_En15
+              ch4_q => ch4_q_sig,  -- sfix16_En15
+              ch5_i => ch5_i_sig,  -- sfix16_En15
+              ch5_q => ch5_q_sig,  -- sfix16_En15
               probe => probe_sig,  -- ufix15
               probe_xcorr1 => probe_xcorr1_sig,  -- sfix32_En16
               probe_xcorr2 => probe_xcorr2_sig,  -- sfix32_En16
@@ -144,14 +168,17 @@ BEGIN
   rx_q_out <= rx_q_out_sig;
 
   rx_v_out <= rx_v_out_sig;
-
+  
   ch1_i <= ch1_i_sig;
-
   ch1_q <= ch1_q_sig;
-
   ch2_i <= ch2_i_sig;
-
   ch2_q <= ch2_q_sig;
+  ch3_i <= ch3_i_sig;
+  ch3_q <= ch3_q_sig;
+  ch4_i <= ch4_i_sig;
+  ch4_q <= ch4_q_sig;
+  ch5_i <= ch5_i_sig;
+  ch5_q <= ch5_q_sig;
 
   probe <= probe_sig;
 

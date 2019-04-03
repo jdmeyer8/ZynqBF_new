@@ -12,28 +12,28 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="10440935320000fs"></ZoomStartTime>
-      <ZoomEndTime time="10501485320001fs"></ZoomEndTime>
-      <Cursor1Time time="10488485320000fs"></Cursor1Time>
+      <ZoomStartTime time="10488553233334fs"></ZoomStartTime>
+      <ZoomEndTime time="10488743833335fs"></ZoomEndTime>
+      <Cursor1Time time="10488585000000fs"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
-      <NameColumnWidth column_width="205"></NameColumnWidth>
-      <ValueColumnWidth column_width="66"></ValueColumnWidth>
+      <NameColumnWidth column_width="201"></NameColumnWidth>
+      <ValueColumnWidth column_width="58"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="45" />
-   <wvobject type="logic" fp_name="/ZynqBF_2tx_tb/clk">
+   <WVObjectSize size="56" />
+   <wvobject fp_name="/ZynqBF_2tx_tb/clk" type="logic">
       <obj_property name="ElementShortName">clk</obj_property>
       <obj_property name="ObjectShortName">clk</obj_property>
    </wvobject>
-   <wvobject type="logic" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_in_fifo/clk200">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_in_fifo/clk200" type="logic">
       <obj_property name="ElementShortName">clk200</obj_property>
       <obj_property name="ObjectShortName">clk200</obj_property>
    </wvobject>
-   <wvobject type="logic" fp_name="/ZynqBF_2tx_tb/reset">
+   <wvobject fp_name="/ZynqBF_2tx_tb/reset" type="logic">
       <obj_property name="ElementShortName">reset</obj_property>
       <obj_property name="ObjectShortName">reset</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/ch1_i">
+   <wvobject fp_name="/ZynqBF_2tx_tb/ch1_i" type="array">
       <obj_property name="ElementShortName">ch1_i[15:0]</obj_property>
       <obj_property name="ObjectShortName">ch1_i[15:0]</obj_property>
       <obj_property name="Radix">REALRADIX</obj_property>
@@ -41,11 +41,11 @@
       <obj_property name="radix_fractionWidth">15</obj_property>
       <obj_property name="radix_otherWidth">0</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/ch1_q">
+   <wvobject fp_name="/ZynqBF_2tx_tb/ch1_q" type="array">
       <obj_property name="ElementShortName">ch1_q[15:0]</obj_property>
       <obj_property name="ObjectShortName">ch1_q[15:0]</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/ch2_i">
+   <wvobject fp_name="/ZynqBF_2tx_tb/ch2_i" type="array">
       <obj_property name="ElementShortName">ch2_i[15:0]</obj_property>
       <obj_property name="ObjectShortName">ch2_i[15:0]</obj_property>
       <obj_property name="Radix">REALRADIX</obj_property>
@@ -53,111 +53,175 @@
       <obj_property name="radix_fractionWidth">15</obj_property>
       <obj_property name="radix_otherWidth">0</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/ch2_q">
+   <wvobject fp_name="/ZynqBF_2tx_tb/ch2_q" type="array">
       <obj_property name="ElementShortName">ch2_q[15:0]</obj_property>
       <obj_property name="ObjectShortName">ch2_q[15:0]</obj_property>
    </wvobject>
-   <wvobject fp_name="divider41" type="divider">
+   <wvobject type="divider" fp_name="divider41">
       <obj_property name="label">peak tracking</obj_property>
       <obj_property name="DisplayName">label</obj_property>
       <obj_property name="BkColor">#FFFFFF</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/corr_dout[0]">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/corr_dout[0]" type="array">
       <obj_property name="DisplayName">label</obj_property>
       <obj_property name="ElementShortName">[0][31:0]</obj_property>
       <obj_property name="ObjectShortName">[0][31:0]</obj_property>
       <obj_property name="label">corr_dout0</obj_property>
       <obj_property name="WaveformStyle">STYLE_ANALOG</obj_property>
-      <obj_property name="CellHeight">100</obj_property>
+      <obj_property name="CellHeight">60</obj_property>
       <obj_property name="Radix">REALRADIX</obj_property>
-      <obj_property name="AnalogYRangeMin">-41291</obj_property>
-      <obj_property name="AnalogYRRangeMax">-40572</obj_property>
+      <obj_property name="AnalogYRangeMin">-41291.000000</obj_property>
+      <obj_property name="AnalogYRRangeMax">-40572.000000</obj_property>
       <obj_property name="radix_realType">SIGNEDFIXEDPOINTRADIX</obj_property>
       <obj_property name="radix_fractionWidth">16</obj_property>
       <obj_property name="radix_otherWidth">0</obj_property>
+      <obj_property name="AnalogYRangeType">ANALOG_YRANGETYPE_AUTO</obj_property>
+      <obj_property name="AnalogInterpolation">ANALOG_INTERPOLATION_LINEAR</obj_property>
+      <obj_property name="AnalogOffscale">ANALOG_OFFSCALE_HIDE</obj_property>
+      <obj_property name="AnalogHorizLine">0.000000</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/corr_dout[1]">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/corr_dout[1]" type="array">
       <obj_property name="DisplayName">label</obj_property>
       <obj_property name="ElementShortName">[1][31:0]</obj_property>
       <obj_property name="ObjectShortName">[1][31:0]</obj_property>
       <obj_property name="label">corr_dout1</obj_property>
       <obj_property name="WaveformStyle">STYLE_ANALOG</obj_property>
-      <obj_property name="CellHeight">100</obj_property>
+      <obj_property name="CellHeight">60</obj_property>
       <obj_property name="Radix">REALRADIX</obj_property>
       <obj_property name="radix_realType">SIGNEDFIXEDPOINTRADIX</obj_property>
       <obj_property name="radix_fractionWidth">16</obj_property>
       <obj_property name="radix_otherWidth">0</obj_property>
+      <obj_property name="AnalogYRangeType">ANALOG_YRANGETYPE_AUTO</obj_property>
+      <obj_property name="AnalogYRangeMin">-41291.000000</obj_property>
+      <obj_property name="AnalogYRRangeMax">-40572.000000</obj_property>
+      <obj_property name="AnalogInterpolation">ANALOG_INTERPOLATION_LINEAR</obj_property>
+      <obj_property name="AnalogOffscale">ANALOG_OFFSCALE_HIDE</obj_property>
+      <obj_property name="AnalogHorizLine">0.000000</obj_property>
    </wvobject>
-   <wvobject fp_name="divider41" type="divider">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/corr_dout[2]" type="array">
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="ElementShortName">[2][31:0]</obj_property>
+      <obj_property name="ObjectShortName">[2][31:0]</obj_property>
+      <obj_property name="label">corr_dout2</obj_property>
+      <obj_property name="Radix">REALRADIX</obj_property>
+      <obj_property name="radix_realType">SIGNEDFIXEDPOINTRADIX</obj_property>
+      <obj_property name="radix_fractionWidth">16</obj_property>
+      <obj_property name="radix_otherWidth">0</obj_property>
+      <obj_property name="WaveformStyle">STYLE_ANALOG</obj_property>
+      <obj_property name="CellHeight">60</obj_property>
+      <obj_property name="AnalogYRangeType">ANALOG_YRANGETYPE_AUTO</obj_property>
+      <obj_property name="AnalogYRangeMin">-41291.000000</obj_property>
+      <obj_property name="AnalogYRRangeMax">-40572.000000</obj_property>
+      <obj_property name="AnalogInterpolation">ANALOG_INTERPOLATION_LINEAR</obj_property>
+      <obj_property name="AnalogOffscale">ANALOG_OFFSCALE_HIDE</obj_property>
+      <obj_property name="AnalogHorizLine">0.000000</obj_property>
+   </wvobject>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/corr_dout[3]" type="array">
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="ElementShortName">[3][31:0]</obj_property>
+      <obj_property name="ObjectShortName">[3][31:0]</obj_property>
+      <obj_property name="label">corr_dout3</obj_property>
+      <obj_property name="Radix">REALRADIX</obj_property>
+      <obj_property name="radix_realType">SIGNEDFIXEDPOINTRADIX</obj_property>
+      <obj_property name="radix_fractionWidth">16</obj_property>
+      <obj_property name="radix_otherWidth">0</obj_property>
+      <obj_property name="WaveformStyle">STYLE_ANALOG</obj_property>
+      <obj_property name="CellHeight">60</obj_property>
+      <obj_property name="AnalogYRangeType">ANALOG_YRANGETYPE_AUTO</obj_property>
+      <obj_property name="AnalogYRangeMin">-41291.000000</obj_property>
+      <obj_property name="AnalogYRRangeMax">-40572.000000</obj_property>
+      <obj_property name="AnalogInterpolation">ANALOG_INTERPOLATION_LINEAR</obj_property>
+      <obj_property name="AnalogOffscale">ANALOG_OFFSCALE_HIDE</obj_property>
+      <obj_property name="AnalogHorizLine">0.000000</obj_property>
+   </wvobject>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/corr_dout[4]" type="array">
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="ElementShortName">[4][31:0]</obj_property>
+      <obj_property name="ObjectShortName">[4][31:0]</obj_property>
+      <obj_property name="label">corr_dout4</obj_property>
+      <obj_property name="Radix">REALRADIX</obj_property>
+      <obj_property name="radix_realType">SIGNEDFIXEDPOINTRADIX</obj_property>
+      <obj_property name="radix_fractionWidth">16</obj_property>
+      <obj_property name="radix_otherWidth">0</obj_property>
+      <obj_property name="WaveformStyle">STYLE_ANALOG</obj_property>
+      <obj_property name="CellHeight">60</obj_property>
+      <obj_property name="AnalogYRangeType">ANALOG_YRANGETYPE_AUTO</obj_property>
+      <obj_property name="AnalogYRangeMin">-41291.000000</obj_property>
+      <obj_property name="AnalogYRRangeMax">-40572.000000</obj_property>
+      <obj_property name="AnalogInterpolation">ANALOG_INTERPOLATION_LINEAR</obj_property>
+      <obj_property name="AnalogOffscale">ANALOG_OFFSCALE_HIDE</obj_property>
+      <obj_property name="AnalogHorizLine">0.000000</obj_property>
+   </wvobject>
+   <wvobject type="divider" fp_name="divider41">
       <obj_property name="label">correlators</obj_property>
       <obj_property name="DisplayName">label</obj_property>
       <obj_property name="BkColor">#FFFFFF</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/u_rx_bram/shift">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/u_rx_bram/shift" type="array">
       <obj_property name="ElementShortName">shift[5:0]</obj_property>
       <obj_property name="ObjectShortName">shift[5:0]</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/rx_ram_wraddr">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/rx_ram_wraddr" type="array">
       <obj_property name="ElementShortName">rx_ram_wraddr[14:0]</obj_property>
       <obj_property name="ObjectShortName">rx_ram_wraddr[14:0]</obj_property>
       <obj_property name="Radix">HEXRADIX</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/u_rx_bram/din_i">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/u_rx_bram/din_i" type="array">
       <obj_property name="ElementShortName">din_i[15:0]</obj_property>
       <obj_property name="ObjectShortName">din_i[15:0]</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/u_rx_bram/we1">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/u_rx_bram/we1" type="array">
       <obj_property name="ElementShortName">we1[0:0]</obj_property>
       <obj_property name="ObjectShortName">we1[0:0]</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/u_rx_bram/we2">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/u_rx_bram/we2" type="array">
       <obj_property name="ElementShortName">we2[0:0]</obj_property>
       <obj_property name="ObjectShortName">we2[0:0]</obj_property>
    </wvobject>
-   <wvobject fp_name="divider41" type="divider">
+   <wvobject type="divider" fp_name="divider41">
       <obj_property name="label">multipliers</obj_property>
       <obj_property name="DisplayName">label</obj_property>
       <obj_property name="BkColor">#FFFFFF</obj_property>
    </wvobject>
-   <wvobject type="logic" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(0)\/u_ch_est_i/dp_en">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(0)\/u_ch_est_i/dp_en" type="logic">
       <obj_property name="ElementShortName">dp_en</obj_property>
       <obj_property name="ObjectShortName">dp_en</obj_property>
    </wvobject>
-   <wvobject type="logic" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(0)\/u_ch_est_i/dp_last">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(0)\/u_ch_est_i/dp_last" type="logic">
       <obj_property name="ElementShortName">dp_last</obj_property>
       <obj_property name="ObjectShortName">dp_last</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(0)\/u_ch_est_i/ac_macc_inst/en_dreg">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(0)\/u_ch_est_i/ac_macc_inst/en_dreg" type="array">
       <obj_property name="ElementShortName">en_dreg[2:0]</obj_property>
       <obj_property name="ObjectShortName">en_dreg[2:0]</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(0)\/u_ch_est_i/ac_macc_inst/last_dreg">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(0)\/u_ch_est_i/ac_macc_inst/last_dreg" type="array">
       <obj_property name="ElementShortName">last_dreg[7:0]</obj_property>
       <obj_property name="ObjectShortName">last_dreg[7:0]</obj_property>
    </wvobject>
-   <wvobject type="logic" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(0)\/u_ch_est_i/ac_macc_inst/ready">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(0)\/u_ch_est_i/ac_macc_inst/ready" type="logic">
       <obj_property name="ElementShortName">ready</obj_property>
       <obj_property name="ObjectShortName">ready</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/rx_ram_rdaddr">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/rx_ram_rdaddr" type="array">
       <obj_property name="ElementShortName">rx_ram_rdaddr[14:0]</obj_property>
       <obj_property name="ObjectShortName">rx_ram_rdaddr[14:0]</obj_property>
       <obj_property name="Radix">HEXRADIX</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/gs_ram_rdaddr_msb">
-      <obj_property name="ElementShortName">gs_ram_rdaddr_msb[0:1][5:0]</obj_property>
-      <obj_property name="ObjectShortName">gs_ram_rdaddr_msb[0:1][5:0]</obj_property>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/gs_ram_rdaddr_msb" type="array">
+      <obj_property name="ElementShortName">gs_ram_rdaddr_msb[0:4][5:0]</obj_property>
+      <obj_property name="ObjectShortName">gs_ram_rdaddr_msb[0:4][5:0]</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/gs_ram_rdaddr_lsb">
-      <obj_property name="ElementShortName">gs_ram_rdaddr_lsb[0:1][5:0]</obj_property>
-      <obj_property name="ObjectShortName">gs_ram_rdaddr_lsb[0:1][5:0]</obj_property>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/gs_ram_rdaddr_lsb" type="array">
+      <obj_property name="ElementShortName">gs_ram_rdaddr_lsb[0:4][5:0]</obj_property>
+      <obj_property name="ObjectShortName">gs_ram_rdaddr_lsb[0:4][5:0]</obj_property>
    </wvobject>
-   <wvobject fp_name="divider41" type="divider">
+   <wvobject type="divider" fp_name="divider41">
       <obj_property name="label">CHANNEL 1</obj_property>
       <obj_property name="DisplayName">label</obj_property>
       <obj_property name="BkColor">#FFFFFF</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(0)\/u_ch_est_i/ch_i">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(0)\/u_ch_est_i/ch_i" type="array">
       <obj_property name="ElementShortName">ch_i[31:0]</obj_property>
       <obj_property name="ObjectShortName">ch_i[31:0]</obj_property>
       <obj_property name="Radix">REALRADIX</obj_property>
@@ -165,16 +229,16 @@
       <obj_property name="radix_fractionWidth">16</obj_property>
       <obj_property name="radix_otherWidth">0</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(0)\/u_ch_est_i/ch_q">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(0)\/u_ch_est_i/ch_q" type="array">
       <obj_property name="ElementShortName">ch_q[31:0]</obj_property>
       <obj_property name="ObjectShortName">ch_q[31:0]</obj_property>
    </wvobject>
-   <wvobject fp_name="divider41" type="divider">
+   <wvobject type="divider" fp_name="divider41">
       <obj_property name="label">CHANNEL 2</obj_property>
       <obj_property name="DisplayName">label</obj_property>
       <obj_property name="BkColor">#FFFFFF</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(1)\/u_ch_est_i/ch_i">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(1)\/u_ch_est_i/ch_i" type="array">
       <obj_property name="ElementShortName">ch_i[31:0]</obj_property>
       <obj_property name="ObjectShortName">ch_i[31:0]</obj_property>
       <obj_property name="Radix">REALRADIX</obj_property>
@@ -182,33 +246,92 @@
       <obj_property name="radix_fractionWidth">16</obj_property>
       <obj_property name="radix_otherWidth">0</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(1)\/u_ch_est_i/ch_q">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(1)\/u_ch_est_i/ch_q" type="array">
       <obj_property name="ElementShortName">ch_q[31:0]</obj_property>
       <obj_property name="ObjectShortName">ch_q[31:0]</obj_property>
    </wvobject>
-   <wvobject fp_name="divider41" type="divider">
+   <wvobject type="divider" fp_name="divider41">
+      <obj_property name="label">CSI Sync</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="BkColor">#FFFFFF</obj_property>
+   </wvobject>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_sync_csi/RD_CNT_MAX" type="array">
+      <obj_property name="ElementShortName">RD_CNT_MAX[15:0]</obj_property>
+      <obj_property name="ObjectShortName">RD_CNT_MAX[15:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_sync_csi/WR_CNT_MAX" type="array">
+      <obj_property name="ElementShortName">WR_CNT_MAX[15:0]</obj_property>
+      <obj_property name="ObjectShortName">WR_CNT_MAX[15:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_sync_csi/est_done" type="logic">
+      <obj_property name="ElementShortName">est_done</obj_property>
+      <obj_property name="ObjectShortName">est_done</obj_property>
+   </wvobject>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_sync_csi/cs_wr" type="logic">
+      <obj_property name="ElementShortName">cs_wr</obj_property>
+      <obj_property name="ObjectShortName">cs_wr</obj_property>
+   </wvobject>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_sync_csi/wr_cnt" type="array">
+      <obj_property name="ElementShortName">wr_cnt[15:0]</obj_property>
+      <obj_property name="ObjectShortName">wr_cnt[15:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_sync_csi/wrdata" type="array">
+      <obj_property name="ElementShortName">wrdata[31:0]</obj_property>
+      <obj_property name="ObjectShortName">wrdata[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_sync_csi/cs_rd" type="logic">
+      <obj_property name="ElementShortName">cs_rd</obj_property>
+      <obj_property name="ObjectShortName">cs_rd</obj_property>
+   </wvobject>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_sync_csi/rd_cnt" type="array">
+      <obj_property name="ElementShortName">rd_cnt[15:0]</obj_property>
+      <obj_property name="ObjectShortName">rd_cnt[15:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_sync_csi/rddata" type="array">
+      <obj_property name="ElementShortName">rddata[31:0]</obj_property>
+      <obj_property name="ObjectShortName">rddata[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="divider" fp_name="divider41">
       <obj_property name="label">channel est.</obj_property>
       <obj_property name="DisplayName">label</obj_property>
       <obj_property name="BkColor">#FFFFFF</obj_property>
    </wvobject>
-   <wvobject type="other" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/u_rx_bram/addr_lsb">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/ch_i_200" type="array">
+      <obj_property name="ElementShortName">ch_i_200[0:4][31:0]</obj_property>
+      <obj_property name="ObjectShortName">ch_i_200[0:4][31:0]</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+   </wvobject>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/ch_q_200" type="array">
+      <obj_property name="ElementShortName">ch_q_200[0:4][31:0]</obj_property>
+      <obj_property name="ObjectShortName">ch_q_200[0:4][31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/ch_i" type="array">
+      <obj_property name="ElementShortName">ch_i[0:4][31:0]</obj_property>
+      <obj_property name="ObjectShortName">ch_i[0:4][31:0]</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+   </wvobject>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/ch_q" type="array">
+      <obj_property name="ElementShortName">ch_q[0:4][31:0]</obj_property>
+      <obj_property name="ObjectShortName">ch_q[0:4][31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/u_rx_bram/addr_lsb" type="other">
       <obj_property name="ElementShortName">addr_lsb</obj_property>
       <obj_property name="ObjectShortName">addr_lsb</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/cs_main">
-      <obj_property name="ElementShortName">cs_main[0:1][7:0]</obj_property>
-      <obj_property name="ObjectShortName">cs_main[0:1][7:0]</obj_property>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/cs_main" type="array">
+      <obj_property name="ElementShortName">cs_main[0:4][7:0]</obj_property>
+      <obj_property name="ObjectShortName">cs_main[0:4][7:0]</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/gsi_single">
-      <obj_property name="ElementShortName">gsi_single[0:1][15:0]</obj_property>
-      <obj_property name="ObjectShortName">gsi_single[0:1][15:0]</obj_property>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/gsi_single" type="array">
+      <obj_property name="ElementShortName">gsi_single[0:4][15:0]</obj_property>
+      <obj_property name="ObjectShortName">gsi_single[0:4][15:0]</obj_property>
       <obj_property name="Radix">HEXRADIX</obj_property>
       <obj_property name="radix_realType">SIGNEDFIXEDPOINTRADIX</obj_property>
       <obj_property name="radix_fractionWidth">15</obj_property>
       <obj_property name="radix_otherWidth">0</obj_property>
       <obj_property name="isExpanded"></obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/rxi_single">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/rxi_single" type="array">
       <obj_property name="ElementShortName">rxi_single[15:0]</obj_property>
       <obj_property name="ObjectShortName">rxi_single[15:0]</obj_property>
       <obj_property name="Radix">HEXRADIX</obj_property>
@@ -216,40 +339,16 @@
       <obj_property name="radix_fractionWidth">15</obj_property>
       <obj_property name="radix_otherWidth">0</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/ch_est_index_start">
-      <obj_property name="ElementShortName">ch_est_index_start[0:1][14:0]</obj_property>
-      <obj_property name="ObjectShortName">ch_est_index_start[0:1][14:0]</obj_property>
-   </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/ch_est_base_addr">
-      <obj_property name="ElementShortName">ch_est_base_addr[14:0]</obj_property>
-      <obj_property name="ObjectShortName">ch_est_base_addr[14:0]</obj_property>
-   </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/ch_est_start_reg">
-      <obj_property name="ElementShortName">ch_est_start_reg[0:1]</obj_property>
-      <obj_property name="ObjectShortName">ch_est_start_reg[0:1]</obj_property>
-   </wvobject>
-   <wvobject type="logic" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/ch_est_start">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/ch_est_start" type="logic">
       <obj_property name="ElementShortName">ch_est_start</obj_property>
       <obj_property name="ObjectShortName">ch_est_start</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/ch_est_en_reg">
-      <obj_property name="ElementShortName">ch_est_en_reg[0:1]</obj_property>
-      <obj_property name="ObjectShortName">ch_est_en_reg[0:1]</obj_property>
-   </wvobject>
-   <wvobject type="logic" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/ch_est_en">
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/ch_est_en" type="logic">
       <obj_property name="ElementShortName">ch_est_en</obj_property>
       <obj_property name="ObjectShortName">ch_est_en</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(0)\/u_ch_est_i/cs_est">
-      <obj_property name="ElementShortName">cs_est[7:0]</obj_property>
-      <obj_property name="ObjectShortName">cs_est[7:0]</obj_property>
-   </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/\gen_ch_est(0)\/u_ch_est_i/dp_count">
-      <obj_property name="ElementShortName">dp_count[11:0]</obj_property>
-      <obj_property name="ObjectShortName">dp_count[11:0]</obj_property>
-   </wvobject>
-   <wvobject type="array" fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/ch_est_done">
-      <obj_property name="ElementShortName">ch_est_done[0:1]</obj_property>
-      <obj_property name="ObjectShortName">ch_est_done[0:1]</obj_property>
+   <wvobject fp_name="/ZynqBF_2tx_tb/dut/u_channel_estimator/u_correlators/ch_est_done" type="array">
+      <obj_property name="ElementShortName">ch_est_done[0:4]</obj_property>
+      <obj_property name="ObjectShortName">ch_est_done[0:4]</obj_property>
    </wvobject>
 </wave_config>

@@ -21,6 +21,7 @@ USE IEEE.numeric_std.ALL;
 USE work.ZynqBF_2t_ip_src_ZynqBF_2tx_fpga_pkg.ALL;
 
 ENTITY ZynqBF_2t_ip_src_channel_estimator IS
+  GENERIC( NCHAN                          :   integer := 5);
   PORT( clk                               :   IN    std_logic;
         clk200                            :   IN    std_logic;
         reset                             :   IN    std_logic;
@@ -66,11 +67,15 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_channel_estimator IS
           din_i                           :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15 [2]
           din_q                           :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15 [2]
           vin                             :   IN    std_logic;                      -- rx ram write enable
+          pd_en                           :   OUT   std_logic;
           est_en                          :   IN    std_logic;
           index                           :   OUT   std_logic_vector(14 DOWNTO 0);  -- ufix15
           step                            :   OUT   std_logic;
           peak_found                      :   OUT   std_logic;
           est_val                         :   OUT   std_logic;                      -- valid signal for ch_est input
+          ch_i                            :   OUT   vector_of_std_logic_vector32(0 to (NCORR-1));
+          ch_q                            :   OUT   vector_of_std_logic_vector32(0 to (NCORR-1));
+          ch_update                       :   OUT   std_logic;
           probe                           :   OUT   std_logic_vector(31 DOWNTO 0)  -- sfix32_En16
           );
   END COMPONENT;
@@ -224,20 +229,25 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_channel_estimator IS
   END COMPONENT;
   
   COMPONENT ZynqBF_2t_ip_src_sync_csi
+    GENERIC( NCHAN                        :   integer := 5);
     PORT( clk                             :   IN    std_logic;
           clk200                          :   IN    std_logic;
           reset                           :   IN    std_logic;
           reset200                        :   IN    std_logic;
           enb                             :   IN    std_logic;
           enb200                          :   IN    std_logic;
-          ch1i_i                          :   IN    std_logic_vector(15 downto 0);
-          ch1q_i                          :   IN    std_logic_vector(15 downto 0);
-          ch2i_i                          :   IN    std_logic_vector(15 downto 0);
-          ch2q_i                          :   IN    std_logic_vector(15 downto 0);
-          ch1i_o                          :   OUT   std_logic_vector(15 downto 0);
-          ch1q_o                          :   OUT   std_logic_vector(15 downto 0);
-          ch2i_o                          :   OUT   std_logic_vector(15 downto 0);
-          ch2q_o                          :   OUT   std_logic_vector(15 downto 0);
+          ch_i_in                         :   IN    vector_of_std_logic_vector32(0 to (NCHAN-1));
+          ch_q_in                         :   IN    vector_of_std_logic_vector32(0 to (NCHAN-1));
+          ch_i_out                        :   OUT   vector_of_std_logic_vector32(0 to (NCHAN-1));
+          ch_q_out                        :   OUT   vector_of_std_logic_vector32(0 to (NCHAN-1));
+          -- ch1i_i                          :   IN    std_logic_vector(15 downto 0);
+          -- ch1q_i                          :   IN    std_logic_vector(15 downto 0);
+          -- ch2i_i                          :   IN    std_logic_vector(15 downto 0);
+          -- ch2q_i                          :   IN    std_logic_vector(15 downto 0);
+          -- ch1i_o                          :   OUT   std_logic_vector(15 downto 0);
+          -- ch1q_o                          :   OUT   std_logic_vector(15 downto 0);
+          -- ch2i_o                          :   OUT   std_logic_vector(15 downto 0);
+          -- ch2q_o                          :   OUT   std_logic_vector(15 downto 0);
           est_done                        :   IN    std_logic
           );
   END COMPONENT;
@@ -332,10 +342,23 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_channel_estimator IS
   signal ch1q_200:                          std_logic_vector(15 downto 0);
   signal ch2i_200:                          std_logic_vector(15 downto 0);
   signal ch2q_200:                          std_logic_vector(15 downto 0);
+  
+  signal ch_i_200:                          vector_of_std_logic_vector32(0 to (NCHAN-1));
+  signal ch_q_200:                          vector_of_std_logic_vector32(0 to (NCHAN-1));
+  signal ch_i:                              vector_of_std_logic_vector32(0 to (NCHAN-1));
+  signal ch_q:                              vector_of_std_logic_vector32(0 to (NCHAN-1));
 
 BEGIN
-  
+
+  -- ASSIGN CHANNEL ESTIMATES
+  ch1_i <= ch_i(0); ch1_q <= ch_q(0);
+  ch2_i <= ch_i(1); ch2_q <= ch_q(1);
+  ch3_i <= ch_i(2); ch3_q <= ch_q(2);
+  ch4_i <= ch_i(3); ch4_q <= ch_q(3);
+  ch5_i <= ch_i(4); ch5_q <= ch_q(4);
+                
   u_correlators : entity work.ZynqBF_2t_ip_src_correlators(rtl)
+    GENERIC MAP( NCORR => NCHAN)
     PORT MAP( clk => clk200,
               reset => reset200,
               enb => enb200,
@@ -343,117 +366,121 @@ BEGIN
               din_i => fifo_rxi,
               din_q => fifo_rxq,
               vin => fifo_rxv,
+              pd_en => pd_en,
               est_en => est_en,
               index => open,
               step => open,
               peak_found => open,
+              ch_i => ch_i_200,
+              ch_q => ch_q_200,
+              ch_update => est_done,
               probe => open
               );
               
-  u_goldSequences : ZynqBF_2t_ip_src_goldSequences
-    PORT MAP( clk => clk200,
-              reset => reset200,
-              enb => enb200,
-              gs_addr => gs_addr,  -- ufix12
-              gs1 => goldSequences_out1,  -- sfix16_En15 [2]
-              gs2 => goldSequences_out2  -- sfix16_En15 [2]
-              );
+  -- u_goldSequences : ZynqBF_2t_ip_src_goldSequences
+    -- PORT MAP( clk => clk200,
+              -- reset => reset200,
+              -- enb => enb200,
+              -- gs_addr => gs_addr,  -- ufix12
+              -- gs1 => goldSequences_out1,  -- sfix16_En15 [2]
+              -- gs2 => goldSequences_out2  -- sfix16_En15 [2]
+              -- );
 
-  u_gs_selector : ZynqBF_2t_ip_src_gs_selector
-    PORT MAP( clk => clk200,
-              reset => reset200,
-              enb => enb200,
-              pd1 => peakdetect_ch1_out3,
-              pd2 => peakdetect_ch2_out3,
-              en => Logical_Operator6_out1,
-              gs_sel => gs_sel  -- boolean [2]
-              );
+  -- u_gs_selector : ZynqBF_2t_ip_src_gs_selector
+    -- PORT MAP( clk => clk200,
+              -- reset => reset200,
+              -- enb => enb200,
+              -- pd1 => peakdetect_ch1_out3,
+              -- pd2 => peakdetect_ch2_out3,
+              -- en => Logical_Operator6_out1,
+              -- gs_sel => gs_sel  -- boolean [2]
+              -- );
 
-  u_peakdetect_ch1 : ZynqBF_2t_ip_src_peakdetect
-    GENERIC MAP(
-              CHANNEL => 1
-              )
-    PORT MAP( clk => clk200,
-              reset => reset200,
-              enb => enb200,
-              rst => Logical_Operator3_out1,
-              din => ram_dout,  -- sfix16_En15 [2]
-              vin => ram_valid,
-              en => xcorr_en,
-              addr => rx_bram_out3,  -- ufix15
-              index => peakdetect_ch1_out1,  -- ufix15
-              step => pd_step,
-              peak_found => peakdetect_ch1_out3,
-              probe => xcorr_ch1  -- sfix32_En16
-              );
+  -- u_peakdetect_ch1 : ZynqBF_2t_ip_src_peakdetect
+    -- GENERIC MAP(
+              -- CHANNEL => 1
+              -- )
+    -- PORT MAP( clk => clk200,
+              -- reset => reset200,
+              -- enb => enb200,
+              -- rst => Logical_Operator3_out1,
+              -- din => ram_dout,  -- sfix16_En15 [2]
+              -- vin => ram_valid,
+              -- en => xcorr_en,
+              -- addr => rx_bram_out3,  -- ufix15
+              -- index => peakdetect_ch1_out1,  -- ufix15
+              -- step => pd_step,
+              -- peak_found => peakdetect_ch1_out3,
+              -- probe => xcorr_ch1  -- sfix32_En16
+              -- );
               
   
-  u_peakdetect_ch2 : ZynqBF_2t_ip_src_peakdetect
-    GENERIC MAP(
-              CHANNEL => 2
-              )
-    PORT MAP( clk => clk200,
-              reset => reset200,
-              enb => enb200,
-              rst => Logical_Operator3_out1,
-              din => ram_dout,  -- sfix16_En15 [2]
-              vin => ram_valid,
-              en => xcorr_en,
-              addr => rx_bram_out3,  -- ufix15
-              index => peakdetect_ch2_out1,  -- ufix15
-              step => pd_step_1,
-              peak_found => peakdetect_ch2_out3,
-              probe => xcorr  -- sfix32_En16
-              );
+  -- u_peakdetect_ch2 : ZynqBF_2t_ip_src_peakdetect
+    -- GENERIC MAP(
+              -- CHANNEL => 2
+              -- )
+    -- PORT MAP( clk => clk200,
+              -- reset => reset200,
+              -- enb => enb200,
+              -- rst => Logical_Operator3_out1,
+              -- din => ram_dout,  -- sfix16_En15 [2]
+              -- vin => ram_valid,
+              -- en => xcorr_en,
+              -- addr => rx_bram_out3,  -- ufix15
+              -- index => peakdetect_ch2_out1,  -- ufix15
+              -- step => pd_step_1,
+              -- peak_found => peakdetect_ch2_out3,
+              -- probe => xcorr  -- sfix32_En16
+              -- );
 
-  u_ram_rd_counter : ZynqBF_2t_ip_src_ram_rd_counter
-    PORT MAP( clk => clk200,
-              reset => reset200,
-              enb => enb200,
-              addr1 => peakdetect_ch1_out1,  -- ufix15
-              addr2 => peakdetect_ch2_out1,  -- ufix15
-              gs_sel => gs_sel,  -- boolean [2]
-              rst => est_done,
-              load => peak_found_d3,
-              pd_init => pd_init,
-              pd_step => pd_step_2,
-              est_step => est_step,
-              rx_addr_out => rx_addr,  -- ufix15
-              re => ram_re,
-              gs_addr_out => gs_addr  -- ufix12
-              );
+  -- u_ram_rd_counter : ZynqBF_2t_ip_src_ram_rd_counter
+    -- PORT MAP( clk => clk200,
+              -- reset => reset200,
+              -- enb => enb200,
+              -- addr1 => peakdetect_ch1_out1,  -- ufix15
+              -- addr2 => peakdetect_ch2_out1,  -- ufix15
+              -- gs_sel => gs_sel,  -- boolean [2]
+              -- rst => est_done,
+              -- load => peak_found_d3,
+              -- pd_init => pd_init,
+              -- pd_step => pd_step_2,
+              -- est_step => est_step,
+              -- rx_addr_out => rx_addr,  -- ufix15
+              -- re => ram_re,
+              -- gs_addr_out => gs_addr  -- ufix12
+              -- );
 
-  u_ram_counter : ZynqBF_2t_ip_src_ram_counter
-    PORT MAP( clk => clk200,
-              reset => reset200,
-              enb => enb200,
-              rst => Logical_Operator3_out1,
-              --ram_we => fifo_rxv,
-              ram_we => rx_bram_we,
-              ram_re => ram_re,
-              pd_en => pd_en,
-              corr_en => xcorr_en,
-              pd_init => pd_init
-              );
+  -- u_ram_counter : ZynqBF_2t_ip_src_ram_counter
+    -- PORT MAP( clk => clk200,
+              -- reset => reset200,
+              -- enb => enb200,
+              -- rst => Logical_Operator3_out1,
+              -- --ram_we => fifo_rxv,
+              -- ram_we => rx_bram_we,
+              -- ram_re => ram_re,
+              -- pd_en => pd_en,
+              -- corr_en => xcorr_en,
+              -- pd_init => pd_init
+              -- );
 
-  u_state_machine : ZynqBF_2t_ip_src_state_machine
-    PORT MAP( clk => clk200,
-              reset => reset200,
-              enb => enb200,
-              peak_found => peak_found_d2,
-              est_done => est_done,
-              cf_done => in_fifo_out4,
-              --pd_en => pd_en,
-              --est_en => est_en,
-              --cf_en => cf_en,
-              state_out => current_state
-              --probe_state => state_machine_out4  -- uint8
-              );
+  -- u_state_machine : ZynqBF_2t_ip_src_state_machine
+    -- PORT MAP( clk => clk200,
+              -- reset => reset200,
+              -- enb => enb200,
+              -- peak_found => peak_found_d2,
+              -- est_done => est_done,
+              -- cf_done => in_fifo_out4,
+              -- --pd_en => pd_en,
+              -- --est_en => est_en,
+              -- --cf_en => cf_en,
+              -- state_out => current_state
+              -- --probe_state => state_machine_out4  -- uint8
+              -- );
               
-  pd_en <= current_state(0);
-  est_en <= current_state(1);
-  cf_en <= current_state(2);
-  rst_en <= current_state(3);
+  -- pd_en <= current_state(0);
+  -- est_en <= current_state(1);
+  -- cf_en <= current_state(2);
+  -- rst_en <= current_state(3);
               
               
 
@@ -495,43 +522,48 @@ BEGIN
               -- addr_out => rx_bram_out3  -- ufix15
               -- );
 
-  u_ch_est : ZynqBF_2t_ip_src_ch_est
-    PORT MAP( clk => clk200,
-              reset => reset200,
-              enb => enb200,
-              est_rst => ch_est_rst,
-              rx => ram_dout,  -- sfix16_En15 [2]
-              gs1 => goldSequences_out1,  -- sfix16_En15 [2]
-              gs2 => goldSequences_out2,  -- sfix16_En15 [2]
-              gs_sel => gs_sel,  -- boolean [2]
-              en => est_en,
-              step_in => ram_valid,
-              ch1_i => ch1i_200,  -- sfix16_En15
-              ch1_q => ch1q_200,  -- sfix16_En15
-              ch2_i => ch2i_200,  -- sfix16_En15
-              ch2_q => ch2q_200,  -- sfix16_En15
-              est_done => est_done,
-              step_out => est_step,
-              probe_ch1i => ch_est_out7,  -- sfix32_En16
-              probe_ch1q => ch_est_out8,  -- sfix32_En16
-              probe_ch1r => ch_est_out9  -- sfix32_En14
-              );
+  -- u_ch_est : ZynqBF_2t_ip_src_ch_est
+    -- PORT MAP( clk => clk200,
+              -- reset => reset200,
+              -- enb => enb200,
+              -- est_rst => ch_est_rst,
+              -- rx => ram_dout,  -- sfix16_En15 [2]
+              -- gs1 => goldSequences_out1,  -- sfix16_En15 [2]
+              -- gs2 => goldSequences_out2,  -- sfix16_En15 [2]
+              -- gs_sel => gs_sel,  -- boolean [2]
+              -- en => est_en,
+              -- step_in => ram_valid,
+              -- ch1_i => ch1i_200,  -- sfix16_En15
+              -- ch1_q => ch1q_200,  -- sfix16_En15
+              -- ch2_i => ch2i_200,  -- sfix16_En15
+              -- ch2_q => ch2q_200,  -- sfix16_En15
+              -- est_done => est_done,
+              -- step_out => est_step,
+              -- probe_ch1i => ch_est_out7,  -- sfix32_En16
+              -- probe_ch1q => ch_est_out8,  -- sfix32_En16
+              -- probe_ch1r => ch_est_out9  -- sfix32_En14
+              -- );
               
   u_sync_csi : ZynqBF_2t_ip_src_sync_csi
+    GENERIC MAP( NCHAN => NCHAN)
     PORT MAP( clk => clk,
               clk200 => clk200,
               reset => reset,
               reset200 => reset200,
               enb => enb,
               enb200 => enb200,
-              ch1i_i => ch1i_200,
-              ch1q_i => ch1q_200,
-              ch2i_i => ch2i_200,
-              ch2q_i => ch2q_200,
-              ch1i_o => ch1_i,
-              ch1q_o => ch1_q,
-              ch2i_o => ch2_i,
-              ch2q_o => ch2_q,
+              ch_i_in => ch_i_200,
+              ch_q_in => ch_q_200,
+              ch_i_out => ch_i,
+              ch_q_out => ch_q,
+              -- ch1i_i => ch1i_200,
+              -- ch1q_i => ch1q_200,
+              -- ch2i_i => ch2i_200,
+              -- ch2q_i => ch2q_200,
+              -- ch1i_o => ch1_i,
+              -- ch1q_o => ch1_q,
+              -- ch2i_o => ch2_i,
+              -- ch2q_o => ch2_q,
               est_done => est_done
               );
               
@@ -552,34 +584,34 @@ BEGIN
     end if;
   end process;
   
-  rx_bram_we <= pd_en and fifo_rxv;
+  -- rx_bram_we <= pd_en and fifo_rxv;
 
-  clear_fifo <= cf_en OR est_en;
+  -- clear_fifo <= cf_en OR est_en;
 
-  pd_step_2 <= pd_step_1 AND (pd_step AND pd_en);
+  -- pd_step_2 <= pd_step_1 AND (pd_step AND pd_en);
 
-  Logical_Operator3_out1 <=  NOT pd_en;
+  -- Logical_Operator3_out1 <=  NOT pd_en;
 
-  Logical_Operator6_out1 <= peakdetect_ch2_out3 OR peakdetect_ch1_out3;
+  -- Logical_Operator6_out1 <= peakdetect_ch2_out3 OR peakdetect_ch1_out3;
 
-  -- ch1_i <= ch1_i_tmp;
-  -- ch1_q <= ch_est_out2;
-  -- ch2_i <= ch_est_out3;
-  -- ch2_q <= ch_est_out4;
+  -- -- ch1_i <= ch1_i_tmp;
+  -- -- ch1_q <= ch_est_out2;
+  -- -- ch2_i <= ch_est_out3;
+  -- -- ch2_q <= ch_est_out4;
 
-  probe_xcorr1 <= xcorr_ch1;
+  -- probe_xcorr1 <= xcorr_ch1;
 
-  probe_xcorr2 <= xcorr;
+  -- probe_xcorr2 <= xcorr;
 
-  probe_state <= "0000" & current_state; --state_machine_out4;
+  -- probe_state <= "0000" & current_state; --state_machine_out4;
 
-  probe_ch1i <= ch_est_out7;
+  -- probe_ch1i <= ch_est_out7;
 
-  probe_ch1q <= ch_est_out8;
+  -- probe_ch1q <= ch_est_out8;
 
-  probe_ch1r <= ch_est_out9;
+  -- probe_ch1r <= ch_est_out9;
 
-  probe <= peakdetect_ch1_out1;
+  -- probe <= peakdetect_ch1_out1;
 
 END rtl;
 

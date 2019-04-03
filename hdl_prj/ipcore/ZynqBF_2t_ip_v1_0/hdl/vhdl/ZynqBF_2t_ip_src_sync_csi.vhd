@@ -18,6 +18,7 @@
 LIBRARY IEEE;
 USE IEEE.std_logic_1164.ALL;
 USE IEEE.numeric_std.ALL;
+USE work.ZynqBF_2t_ip_src_ZynqBF_2tx_fpga_pkg.ALL;
 
 LIBRARY UNISIM;
 use UNISIM.vcomponents.all;
@@ -26,20 +27,25 @@ LIBRARY UNIMACRO;
 use UNIMACRO.vcomponents.all;
 
 ENTITY ZynqBF_2t_ip_src_sync_csi IS
+  GENERIC( NCHAN                        :   integer := 5);
   PORT( clk                             :   IN    std_logic;
         clk200                          :   IN    std_logic;
         reset                           :   IN    std_logic;
         reset200                        :   IN    std_logic;
         enb                             :   IN    std_logic;
         enb200                          :   IN    std_logic;
-        ch1i_i                          :   IN    std_logic_vector(15 downto 0);
-        ch1q_i                          :   IN    std_logic_vector(15 downto 0);
-        ch2i_i                          :   IN    std_logic_vector(15 downto 0);
-        ch2q_i                          :   IN    std_logic_vector(15 downto 0);
-        ch1i_o                          :   OUT   std_logic_vector(15 downto 0);
-        ch1q_o                          :   OUT   std_logic_vector(15 downto 0);
-        ch2i_o                          :   OUT   std_logic_vector(15 downto 0);
-        ch2q_o                          :   OUT   std_logic_vector(15 downto 0);
+        ch_i_in                         :   IN    vector_of_std_logic_vector32(0 to (NCHAN-1));
+        ch_q_in                         :   IN    vector_of_std_logic_vector32(0 to (NCHAN-1));
+        ch_i_out                        :   OUT   vector_of_std_logic_vector32(0 to (NCHAN-1));
+        ch_q_out                        :   OUT   vector_of_std_logic_vector32(0 to (NCHAN-1));
+        -- ch1i_i                          :   IN    std_logic_vector(15 downto 0);
+        -- ch1q_i                          :   IN    std_logic_vector(15 downto 0);
+        -- ch2i_i                          :   IN    std_logic_vector(15 downto 0);
+        -- ch2q_i                          :   IN    std_logic_vector(15 downto 0);
+        -- ch1i_o                          :   OUT   std_logic_vector(15 downto 0);
+        -- ch1q_o                          :   OUT   std_logic_vector(15 downto 0);
+        -- ch2i_o                          :   OUT   std_logic_vector(15 downto 0);
+        -- ch2q_o                          :   OUT   std_logic_vector(15 downto 0);
         est_done                        :   IN    std_logic
         );
 END ZynqBF_2t_ip_src_sync_csi;
@@ -55,11 +61,16 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_sync_csi IS
   signal ch2i                             : std_logic_vector(15 downto 0);
   signal ch2q                             : std_logic_vector(15 downto 0);
   
+  signal ch_i_reg                         : vector_of_std_logic_vector32(0 to (NCHAN-1));
+  signal ch_q_reg                         : vector_of_std_logic_vector32(0 to (NCHAN-1));
+  signal ch_i                             : vector_of_std_logic_vector32(0 to (NCHAN-1));
+  signal ch_q                             : vector_of_std_logic_vector32(0 to (NCHAN-1));
+  
   signal wren                             : std_logic;
   signal rden                             : std_logic;
   signal rden_d1                          : std_logic;
-  signal wrdata                           : std_logic_vector(15 downto 0);
-  signal rddata                           : std_logic_vector(15 downto 0);
+  signal wrdata                           : std_logic_vector(31 downto 0);
+  signal rddata                           : std_logic_vector(31 downto 0);
   signal empty_i                          : std_logic;
   
   signal cs_wr                            : std_logic;
@@ -68,12 +79,15 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_sync_csi IS
   constant s_wr                           : std_logic := '1';
   constant s_rd                           : std_logic := '1';
   
-  signal wr_cnt                           : unsigned(1 downto 0);
-  signal rd_cnt                           : unsigned(1 downto 0);
+  signal wr_cnt                           : unsigned(15 downto 0);
+  signal rd_cnt                           : unsigned(15 downto 0);
+  
+  constant WR_CNT_MAX                     : unsigned(15 downto 0) := to_unsigned(2*NCHAN-1, 16);
+  constant RD_CNT_MAX                     : unsigned(15 downto 0) := to_unsigned(2*NCHAN-1, 16);
   
 BEGIN
   
-  u_sync_fifo : FIFO_DUALCLOCK_MACRO
+  u_sync_fifo1 : FIFO_DUALCLOCK_MACRO
   generic map(
     fifo_size => "36Kb",
     data_width => 16,
@@ -84,12 +98,37 @@ BEGIN
     rst => reset,
     wrclk => clk200,
     wren => wren,
-    di => wrdata,
+    di => wrdata(15 downto 0),
     full => open,
     rdclk => clk,
     rden => rden,
-    do => rddata,
+    do => rddata(15 downto 0),
     empty => empty_i,
+    almostempty => open,
+    almostfull => open,
+    wrerr => open,
+    rderr => open,
+    wrcount => open,
+    rdcount => open
+  );  
+  
+  u_sync_fifo2 : FIFO_DUALCLOCK_MACRO
+  generic map(
+    fifo_size => "36Kb",
+    data_width => 16,
+    almost_full_offset => x"0009",
+    almost_empty_offset => x"0009"
+    )
+  port map(
+    rst => reset,
+    wrclk => clk200,
+    wren => wren,
+    di => wrdata(31 downto 16),
+    full => open,
+    rdclk => clk,
+    rden => rden,
+    do => rddata(31 downto 16),
+    empty => open,
     almostempty => open,
     almostfull => open,
     wrerr => open,
@@ -113,7 +152,7 @@ BEGIN
               cs_wr <= s_wait;
             end if;
           when s_wr =>
-            if wr_cnt = "11" then
+            if wr_cnt = WR_CNT_MAX then
               cs_wr <= s_wait;
             else
               cs_wr <= s_wr;
@@ -129,23 +168,42 @@ BEGIN
   begin
     if clk200'event and clk200 = '1' then
       if reset200 = '1' then
-        wr_cnt <= "00";
+        wr_cnt <= (others => '0');
       elsif enb200 = '1' and cs_wr = s_wr then
-        wr_cnt <= wr_cnt + "01";
+        if wr_cnt = WR_CNT_MAX then
+            wr_cnt <= (others => '0');
+        else
+            wr_cnt <= wr_cnt + 1;
+        end if;
       else
-        wr_cnt <= "00";
+        wr_cnt <= (others => '0');
       end if;
+    end if;
+  end process;
+  
+  register_wr_data : process(clk200)
+  begin
+    if clk200'event and clk200 = '1' then
+        if reset200 = '1' then
+            ch_i_reg <= (others => (others => '0'));
+            ch_q_reg <= (others => (others => '0'));
+        elsif enb200 = '1' then
+            ch_i_reg <= ch_i_in;
+            ch_q_reg <= ch_q_in;
+        end if;
     end if;
   end process;
   
   wren <= '1' when enb200 = '1' and cs_wr = s_wr else '0';
   
-  with wr_cnt select wrdata <=
-    ch1i_i when "00",
-    ch1q_i when "01",
-    ch2i_i when "10",
-    ch2q_i when "11",
-    x"0000" when others;
+  -- with wr_cnt select wrdata <=
+    -- ch1i_i when "00",
+    -- ch1q_i when "01",
+    -- ch2i_i when "10",
+    -- ch2q_i when "11",
+    -- x"0000" when others;
+  
+  wrdata <= ch_q_reg(to_integer(wr_cnt(15 downto 1))) when wr_cnt(0) = '1' else ch_i_reg(to_integer(wr_cnt(15 downto 1)));
   
   
   -- Read side signals
@@ -163,7 +221,7 @@ BEGIN
               cs_rd <= s_wait;
             end if;
           when s_rd =>
-            if rd_cnt = "11" then
+            if rd_cnt = RD_CNT_MAX then
               cs_rd <= s_wait;
             else
               cs_rd <= s_rd;
@@ -179,11 +237,15 @@ BEGIN
   begin
     if clk'event and clk = '1' then
       if reset = '1' then
-        rd_cnt <= "00";
+        rd_cnt <= (others => '0');
       elsif enb = '1' and rden_d1 = '1' then
-        rd_cnt <= rd_cnt + "01";
+        if rd_cnt = RD_CNT_MAX then
+            rd_cnt <= (others => '0');
+        else
+            rd_cnt <= rd_cnt + 1;
+        end if;
       else
-        rd_cnt <= "00";
+        rd_cnt <= (others => '0');
       end if;
     end if;
   end process;
@@ -205,48 +267,58 @@ BEGIN
   begin
     if clk'event and clk = '1' then
       if reset = '1' then
-        ch1i <= x"0000";
-        ch1q <= x"0000";
-        ch2i <= x"0000";
-        ch2q <= x"0000";
+        -- ch1i <= x"0000";
+        -- ch1q <= x"0000";
+        -- ch2i <= x"0000";
+        -- ch2q <= x"0000";
+        ch_i <= (others => (others => '0'));
+        ch_q <= (others => (others => '0'));
       elsif enb = '1' then
         if cs_rd = s_rd then
-          case rd_cnt is
-            when "00" =>
-              ch1i <= rddata;
-              ch1q <= ch1q;
-              ch2i <= ch2i;
-              ch2q <= ch2q;
-            when "01" =>
-              ch1i <= ch1i;
-              ch1q <= rddata;
-              ch2i <= ch2i;
-              ch2q <= ch2q;
-            when "10" =>
-              ch1i <= ch1i;
-              ch1q <= ch1q;
-              ch2i <= rddata;
-              ch2q <= ch2q;
-            when "11" =>
-              ch1i <= ch1i;
-              ch1q <= ch1q;
-              ch2i <= ch2i;
-              ch2q <= rddata;
-            when others =>
-              ch1i <= ch1i;
-              ch1q <= ch1q;
-              ch2i <= ch2i;
-              ch2q <= ch2q;
-          end case;
+            if rd_cnt(0) = '1' then
+                ch_q(to_integer(rd_cnt(15 downto 1))) <= rddata;
+            else
+                ch_i(to_integer(rd_cnt(15 downto 1))) <= rddata;
+            end if;
+          -- case rd_cnt is
+            -- when "00" =>
+              -- ch1i <= rddata;
+              -- ch1q <= ch1q;
+              -- ch2i <= ch2i;
+              -- ch2q <= ch2q;
+            -- when "01" =>
+              -- ch1i <= ch1i;
+              -- ch1q <= rddata;
+              -- ch2i <= ch2i;
+              -- ch2q <= ch2q;
+            -- when "10" =>
+              -- ch1i <= ch1i;
+              -- ch1q <= ch1q;
+              -- ch2i <= rddata;
+              -- ch2q <= ch2q;
+            -- when "11" =>
+              -- ch1i <= ch1i;
+              -- ch1q <= ch1q;
+              -- ch2i <= ch2i;
+              -- ch2q <= rddata;
+            -- when others =>
+              -- ch1i <= ch1i;
+              -- ch1q <= ch1q;
+              -- ch2i <= ch2i;
+              -- ch2q <= ch2q;
+          -- end case;
         end if;
       end if;
     end if;
   end process;
   
-  ch1i_o <= ch1i;
-  ch1q_o <= ch1q;
-  ch2i_o <= ch2i;
-  ch2q_o <= ch2q;
+  
+  ch_i_out <= ch_i;
+  ch_q_out <= ch_q;
+  -- ch1i_o <= ch1i;
+  -- ch1q_o <= ch1q;
+  -- ch2i_o <= ch2i;
+  -- ch2q_o <= ch2q;
 
 END rtl;
 
