@@ -55,10 +55,16 @@ port(
     rx_i_out:       out std_logic_vector(15 downto 0);
     rx_q_out:       out std_logic_vector(15 downto 0);
     rx_v_out:       out std_logic;
-    ch1_i:          out std_logic_vector(15 downto 0);
-    ch1_q:          out std_logic_vector(15 downto 0);
-    ch2_i:          out std_logic_vector(15 downto 0);
-    ch2_q:          out std_logic_vector(15 downto 0);
+    ch1_i:          out std_logic_vector(31 downto 0);
+    ch1_q:          out std_logic_vector(31 downto 0);
+    ch2_i:          out std_logic_vector(31 downto 0);
+    ch2_q:          out std_logic_vector(31 downto 0);
+    ch3_i:          out std_logic_vector(31 downto 0);
+    ch3_q:          out std_logic_vector(31 downto 0);
+    ch4_i:          out std_logic_vector(31 downto 0);
+    ch4_q:          out std_logic_vector(31 downto 0);
+    ch5_i:          out std_logic_vector(31 downto 0);
+    ch5_q:          out std_logic_vector(31 downto 0);
     probe:          out std_logic_vector(14 downto 0);
     probe_xcorr1:   out std_logic_vector(31 downto 0);        -- correlator for ch1
     probe_xcorr2:   out std_logic_vector(31 downto 0);        -- correlator for ch2
@@ -85,10 +91,16 @@ signal rx_i_out:        std_logic_vector(15 downto 0);
 signal rx_q_out:        std_logic_vector(15 downto 0);
 signal rx_v_out:        std_logic;
 
-signal ch1_i:           std_logic_vector(15 downto 0);
-signal ch1_q:           std_logic_vector(15 downto 0);
-signal ch2_i:           std_logic_vector(15 downto 0);
-signal ch2_q:           std_logic_vector(15 downto 0);
+signal ch1_i:           std_logic_vector(31 downto 0);
+signal ch1_q:           std_logic_vector(31 downto 0);
+signal ch2_i:           std_logic_vector(31 downto 0);
+signal ch2_q:           std_logic_vector(31 downto 0);
+signal ch3_i:           std_logic_vector(31 downto 0);
+signal ch3_q:           std_logic_vector(31 downto 0);
+signal ch4_i:           std_logic_vector(31 downto 0);
+signal ch4_q:           std_logic_vector(31 downto 0);
+signal ch5_i:           std_logic_vector(31 downto 0);
+signal ch5_q:           std_logic_vector(31 downto 0);
 signal probe:           std_logic_vector(14 downto 0);
 
 signal probe_xcorr1:    std_logic_vector(31 downto 0);
@@ -185,6 +197,12 @@ port map(
     ch1_q => ch1_q,
     ch2_i => ch2_i,
     ch2_q => ch2_q,
+    ch3_i => ch3_i,
+    ch3_q => ch3_q,
+    ch4_i => ch4_i,
+    ch4_q => ch4_q,
+    ch5_i => ch5_i,
+    ch5_q => ch5_q,
     probe => probe,
     probe_xcorr1 => probe_xcorr1,
     probe_xcorr2 => probe_xcorr2,
