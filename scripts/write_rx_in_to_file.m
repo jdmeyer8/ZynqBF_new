@@ -58,7 +58,7 @@ n5_rand = numel(rx5_ind+numel(gs5):numel(rx5_data));
 rx5_rand(rx5_ind+numel(gs5):numel(rx5_data)) = 0.45*rand(n5_rand,1) + 1i*0.45*rand(n5_rand,1);
 rx5 = rx5_data + rx5_rand;
 
-rx = (rx1+rx2+rx3+rx4+rx5);
+rx = (rx1+rx2+rx3+rx4+rx5) + normrnd(0,0.5,20e3,1) + 1i*normrnd(0,0.5,20e3,1);
 rx_i_in = real(rx);
 rx_q_in = imag(rx);
 

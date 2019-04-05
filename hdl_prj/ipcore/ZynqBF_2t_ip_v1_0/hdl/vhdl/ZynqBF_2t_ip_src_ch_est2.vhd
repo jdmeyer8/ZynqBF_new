@@ -79,7 +79,6 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_ch_est2 IS
   signal macc_ac, macc_bd                   : std_logic_vector(31 downto 0);
   signal macc_ad, macc_bc                   : std_logic_vector(31 downto 0);
   signal macc_en                            : std_logic;
-  signal sum_aabb                           : signed(31 downto 0);
   
   -- dot product signals
   signal dp_start                           : std_logic;
