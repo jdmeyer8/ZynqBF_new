@@ -248,6 +248,8 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   signal ch_est_base_addr                 : std_logic_vector(14 downto 0);
   signal ch_est_base_locked               : std_logic;
   
+  constant REG_MAX                        : unsigned(0 to (NCORR-1)) := (others => '1');
+  
   
   signal ch1_corr_probe                   : std_logic_vector(31 downto 0);
   signal ch2_corr_probe                   : std_logic_vector(31 downto 0);
@@ -282,7 +284,7 @@ BEGIN
   pd_rxaddr <= std_logic_vector(corr_cnt + corr_base);
   pd_gsaddr <= std_logic_vector(corr_cnt(11 downto 6));
   
-  pd_en <= '1' when pd_en_reg > to_unsigned(16#0#, NCORR) else '0';
+  pd_en <= '1' when ch_est_en = '0' else '0';
   
   rx_ram_we <= vin when ch_est_en_reg = to_unsigned(16#0#, NCORR) else '0';
   rx_ram_rdaddr <= std_logic_vector(ch_est_rxaddr) when ch_est_en = '1' else pd_rxaddr;
