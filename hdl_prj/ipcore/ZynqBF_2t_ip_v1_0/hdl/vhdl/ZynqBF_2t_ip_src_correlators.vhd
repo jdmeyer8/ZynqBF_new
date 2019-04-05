@@ -225,7 +225,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   signal update_est_index                 : std_logic_vector(0 to (NCORR-1));
   
   signal corr_threshold                   : vector_of_std_logic_vector32(0 to (NCORR-1));
-  constant corr_thresh_const              : vector_of_std_logic_vector32(0 to (NCORR-1)) := (others => x"01000000");
+  constant corr_thresh_const              : vector_of_std_logic_vector32(0 to (NCORR-1)) := (others => x"00250000");
   
   signal cs_main                          : vector_of_std_logic_vector8(0 to (NCORR-1));    -- main FSM
   constant s_peakdetect                   : std_logic_vector(7 downto 0) := "00000001";
@@ -246,6 +246,20 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   signal ch_est_index_start               : vector_of_std_logic_vector15(0 to (NCORR-1));
   signal ch_est_base_addr                 : std_logic_vector(14 downto 0);
   signal ch_est_base_locked               : std_logic;
+  
+  
+  signal ch1_corr_probe                   : std_logic_vector(31 downto 0);
+  signal ch2_corr_probe                   : std_logic_vector(31 downto 0);
+  signal ch3_corr_probe                   : std_logic_vector(31 downto 0);
+  signal ch4_corr_probe                   : std_logic_vector(31 downto 0);
+  signal ch5_corr_probe                   : std_logic_vector(31 downto 0);
+  
+  attribute mark_debug                    : string;
+  attribute mark_debug of ch1_corr_probe  : signal is "true";
+  attribute mark_debug of ch2_corr_probe  : signal is "true";
+  attribute mark_debug of ch3_corr_probe  : signal is "true";
+  attribute mark_debug of ch4_corr_probe  : signal is "true";
+  attribute mark_debug of ch5_corr_probe  : signal is "true";
   
 BEGIN
 
@@ -731,6 +745,26 @@ BEGIN
         end if;
     end if;
   end process;
+  
+  
+  probes_process : process(clk)
+    begin
+      if clk'event and clk = '1' then
+          if clk = '1' then
+              ch1_corr_probe <= (others => '0');
+              ch2_corr_probe <= (others => '0');
+              ch3_corr_probe <= (others => '0');
+              ch4_corr_probe <= (others => '0');
+              ch5_corr_probe <= (others => '0');
+          else
+              ch1_corr_probe <= std_logic_vector(abs(signed(corr_dout(0))));
+              ch2_corr_probe <= std_logic_vector(abs(signed(corr_dout(1))));
+              ch3_corr_probe <= std_logic_vector(abs(signed(corr_dout(2))));
+              ch4_corr_probe <= std_logic_vector(abs(signed(corr_dout(3))));
+              ch5_corr_probe <= std_logic_vector(abs(signed(corr_dout(4))));
+          end if;
+      end if;
+    end process;
 
 END rtl;
 
