@@ -209,10 +209,11 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   
   -- peak tracking fsm/
   -- signal cs_ptrack                        : std_logic_vector(2 downto 0);
-  signal cs_ptrack                        : vector_of_std_logic_vector3(0 to (NCORR-1));
-  constant s_wait                         : std_logic_vector(2 downto 0) := "001";
-  constant s_track                        : std_logic_vector(2 downto 0) := "010";
-  constant s_finish                       : std_logic_vector(2 downto 0) := "100";
+  signal cs_ptrack                        : vector_of_std_logic_vector4(0 to (NCORR-1));
+  constant s_wait                         : std_logic_vector(3 downto 0) := "0001";
+  constant s_track                        : std_logic_vector(3 downto 0) := "0010";
+  constant s_finish                       : std_logic_vector(3 downto 0) := "0100";
+  constant s_waitothers                   : std_logic_vector(3 downto 0) := "1000";
   
   signal ptrack_ind                       : integer range 0 to (NCORR-1);   -- index of which correlator has a peak detected
   signal ptrack_addr_in                   : unsigned(14 downto 0);
@@ -583,7 +584,13 @@ BEGIN
                             cs_ptrack(i) <= s_track;
                         end if;
                     when s_finish =>
-                        cs_ptrack(i) <= s_wait;
+                        cs_ptrack(i) <= s_waitothers;
+                    when s_waitothers =>
+                        if ptrack_en > to_unsigned(16#0#, NCORR) then
+                            cs_ptrack(i) <= s_waitothers;
+                        else
+                            cs_ptrack(i) <= s_wait;
+                        end if;
                     when others =>
                         cs_ptrack(i) <= s_wait;
                 end case;
