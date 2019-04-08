@@ -138,7 +138,7 @@ BEGIN
   
   empty <= empty_i;
   
-  rden <= pd_en and empty_n;
+  rden <= (pd_en or cf_en) and empty_n;
   --rden_process: process(clk200)
   --begin
   --  if clk200'event and clk200 = '1' then

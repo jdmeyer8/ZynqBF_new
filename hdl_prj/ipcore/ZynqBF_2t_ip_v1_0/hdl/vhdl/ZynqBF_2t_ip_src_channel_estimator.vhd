@@ -69,6 +69,8 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_channel_estimator IS
           vin                             :   IN    std_logic;                      -- rx ram write enable
           pd_en                           :   OUT   std_logic;
           est_en                          :   IN    std_logic;
+          fifo_empty                      :   IN    std_logic;
+          clear_fifo                      :   OUT   std_logic;
           index                           :   OUT   std_logic_vector(14 DOWNTO 0);  -- ufix15
           step                            :   OUT   std_logic;
           peak_found                      :   OUT   std_logic;
@@ -333,20 +335,21 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_channel_estimator IS
   SIGNAL ch_est_out7                      : std_logic_vector(31 DOWNTO 0);  -- ufix32
   SIGNAL ch_est_out8                      : std_logic_vector(31 DOWNTO 0);  -- ufix32
   SIGNAL ch_est_out9                      : std_logic_vector(31 DOWNTO 0);  -- ufix32
-  signal peak_found_d1:                     std_logic;
-  signal peak_found_d2:                     std_logic;
-  signal peak_found_d3:                     std_logic;
-  signal ch_est_rst:                        std_logic;
-  signal rx_bram_we:                        std_logic;
-  signal ch1i_200:                          std_logic_vector(15 downto 0);
-  signal ch1q_200:                          std_logic_vector(15 downto 0);
-  signal ch2i_200:                          std_logic_vector(15 downto 0);
-  signal ch2q_200:                          std_logic_vector(15 downto 0);
+  signal peak_found_d1                    : std_logic;
+  signal peak_found_d2                    : std_logic;
+  signal peak_found_d3                    : std_logic;
+  signal ch_est_rst                       : std_logic;
+  signal rx_bram_we                       : std_logic;
+  signal fifo_empty                       : std_logic;
+  signal ch1i_200                         : std_logic_vector(15 downto 0);
+  signal ch1q_200                         : std_logic_vector(15 downto 0);
+  signal ch2i_200                         : std_logic_vector(15 downto 0);
+  signal ch2q_200                         : std_logic_vector(15 downto 0);
   
-  signal ch_i_200:                          vector_of_std_logic_vector32(0 to (NCHAN-1));
-  signal ch_q_200:                          vector_of_std_logic_vector32(0 to (NCHAN-1));
-  signal ch_i:                              vector_of_std_logic_vector32(0 to (NCHAN-1));
-  signal ch_q:                              vector_of_std_logic_vector32(0 to (NCHAN-1));
+  signal ch_i_200                         : vector_of_std_logic_vector32(0 to (NCHAN-1));
+  signal ch_q_200                         : vector_of_std_logic_vector32(0 to (NCHAN-1));
+  signal ch_i                             : vector_of_std_logic_vector32(0 to (NCHAN-1));
+  signal ch_q                             : vector_of_std_logic_vector32(0 to (NCHAN-1));
 
 BEGIN
 
@@ -368,6 +371,8 @@ BEGIN
               vin => fifo_rxv,
               pd_en => pd_en,
               est_en => est_en,
+              fifo_empty => fifo_empty,
+              clear_fifo => clear_fifo,
               index => open,
               step => open,
               peak_found => open,
@@ -499,7 +504,7 @@ BEGIN
               rxi_out => fifo_rxi,  -- sfix16_En15
               rxq_out => fifo_rxq,  -- sfix16_En15
               rxv_out => fifo_rxv,
-              empty => in_fifo_out4
+              empty => fifo_empty
               );
 
   -- u_rx_bram : ZynqBF_2t_ip_src_rx_bram

@@ -21,16 +21,16 @@ USE IEEE.numeric_std.ALL;
 USE work.ZynqBF_2t_ip_src_ZynqBF_2tx_fpga_pkg.ALL;
 
 ENTITY ZynqBF_2t_ip_src_goldSeq_ram IS
-  GENERIC(
-        CHANNEL                           :   integer := 1      -- number of gold sequences to use
+  GENERIC( NDSP                           :   integer := 32;
+           CHANNEL                        :   integer := 1      -- number of gold sequences to use
         );
   PORT( clk                               :   IN    std_logic;
         reset                             :   IN    std_logic;
         enb                               :   IN    std_logic;
-        addr                              :   IN    std_logic_vector(5 DOWNTO 0);  -- ufix6
-        addr_lsb                          :   IN    std_logic_vector(5 downto 0);
+        addr                              :   IN    std_logic_vector(6 DOWNTO 0);  -- ufix6
+        addr_lsb                          :   IN    std_logic_vector(4 downto 0);
         dout_single                       :   OUT   std_logic_vector(15 downto 0);
-        dout                              :   OUT   vector_of_std_logic_vector16(0 to 63)
+        dout                              :   OUT   vector_of_std_logic_vector16(0 to (NDSP-1))
         );
 END ZynqBF_2t_ip_src_goldSeq_ram;
 
@@ -41,9 +41,9 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_goldSeq_ram IS
     port(
         clka:           in std_logic;
         wea:            in std_logic_vector(0 downto 0);
-        addra:          in std_logic_vector(5 downto 0);
-        dina:           in std_logic_vector(1023 downto 0);
-        douta:          out std_logic_vector(1023 downto 0)
+        addra:          in std_logic_vector(6 downto 0);
+        dina:           in std_logic_vector(511 downto 0);
+        douta:          out std_logic_vector(511 downto 0)
     );
     end component;
     
@@ -51,9 +51,9 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_goldSeq_ram IS
     port(
         clka:           in std_logic;
         wea:            in std_logic_vector(0 downto 0);
-        addra:          in std_logic_vector(5 downto 0);
-        dina:           in std_logic_vector(1023 downto 0);
-        douta:          out std_logic_vector(1023 downto 0)
+        addra:          in std_logic_vector(6 downto 0);
+        dina:           in std_logic_vector(511 downto 0);
+        douta:          out std_logic_vector(511 downto 0)
     );
     end component;
     
@@ -61,9 +61,9 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_goldSeq_ram IS
     port(
         clka:           in std_logic;
         wea:            in std_logic_vector(0 downto 0);
-        addra:          in std_logic_vector(5 downto 0);
-        dina:           in std_logic_vector(1023 downto 0);
-        douta:          out std_logic_vector(1023 downto 0)
+        addra:          in std_logic_vector(6 downto 0);
+        dina:           in std_logic_vector(511 downto 0);
+        douta:          out std_logic_vector(511 downto 0)
     );
     end component;
     
@@ -71,9 +71,9 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_goldSeq_ram IS
     port(
         clka:           in std_logic;
         wea:            in std_logic_vector(0 downto 0);
-        addra:          in std_logic_vector(5 downto 0);
-        dina:           in std_logic_vector(1023 downto 0);
-        douta:          out std_logic_vector(1023 downto 0)
+        addra:          in std_logic_vector(6 downto 0);
+        dina:           in std_logic_vector(511 downto 0);
+        douta:          out std_logic_vector(511 downto 0)
     );
     end component;
     
@@ -81,9 +81,9 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_goldSeq_ram IS
     port(
         clka:           in std_logic;
         wea:            in std_logic_vector(0 downto 0);
-        addra:          in std_logic_vector(5 downto 0);
-        dina:           in std_logic_vector(1023 downto 0);
-        douta:          out std_logic_vector(1023 downto 0)
+        addra:          in std_logic_vector(6 downto 0);
+        dina:           in std_logic_vector(511 downto 0);
+        douta:          out std_logic_vector(511 downto 0)
     );
     end component;
     
@@ -91,9 +91,9 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_goldSeq_ram IS
     port(
         clka:           in std_logic;
         wea:            in std_logic_vector(0 downto 0);
-        addra:          in std_logic_vector(5 downto 0);
-        dina:           in std_logic_vector(1023 downto 0);
-        douta:          out std_logic_vector(1023 downto 0)
+        addra:          in std_logic_vector(6 downto 0);
+        dina:           in std_logic_vector(511 downto 0);
+        douta:          out std_logic_vector(511 downto 0)
     );
     end component;
     
@@ -101,9 +101,9 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_goldSeq_ram IS
     port(
         clka:           in std_logic;
         wea:            in std_logic_vector(0 downto 0);
-        addra:          in std_logic_vector(5 downto 0);
-        dina:           in std_logic_vector(1023 downto 0);
-        douta:          out std_logic_vector(1023 downto 0)
+        addra:          in std_logic_vector(6 downto 0);
+        dina:           in std_logic_vector(511 downto 0);
+        douta:          out std_logic_vector(511 downto 0)
     );
     end component;
     
@@ -111,15 +111,15 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_goldSeq_ram IS
     port(
         clka:           in std_logic;
         wea:            in std_logic_vector(0 downto 0);
-        addra:          in std_logic_vector(5 downto 0);
-        dina:           in std_logic_vector(1023 downto 0);
-        douta:          out std_logic_vector(1023 downto 0)
+        addra:          in std_logic_vector(6 downto 0);
+        dina:           in std_logic_vector(511 downto 0);
+        douta:          out std_logic_vector(511 downto 0)
     );
     end component;
 
     signal we:          std_logic_vector(0 downto 0);
-    signal dout_i:      std_logic_vector(1023 downto 0);
-    signal sel:         integer range 0 to 63;
+    signal dout_i:      std_logic_vector(511 downto 0);
+    signal sel:         integer range 0 to 31;
         
 BEGIN
   
@@ -222,7 +222,7 @@ BEGIN
                 dout <= (others => (others => '0'));
             elsif enb = '1' then
                 dout_single <= dout_i((16*sel+15) downto (16*sel));
-                for i in 0 to 63 loop
+                for i in 0 to (NDSP-1) loop
                     dout(i) <= dout_i((16*i+15) downto (16*i));
                 end loop;
             end if;

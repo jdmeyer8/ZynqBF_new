@@ -11,11 +11,11 @@
 %     toload = './data/goldSeq_4k.mat';
 % end
 
-fname1 = fullfile('hdl_prj','vivado_ip_prj','data','gsram1.coe');
-fname2 = fullfile('hdl_prj','vivado_ip_prj','data','gsram2.coe');
-fname3 = fullfile('hdl_prj','vivado_ip_prj','data','gsram3.coe');
-fname4 = fullfile('hdl_prj','vivado_ip_prj','data','gsram4.coe');
-fname5 = fullfile('hdl_prj','vivado_ip_prj','data','gsram5.coe');
+fname1 = fullfile('hdl_prj','vivado_ip_prj','data','gsram1_32.coe');
+fname2 = fullfile('hdl_prj','vivado_ip_prj','data','gsram2_32.coe');
+fname3 = fullfile('hdl_prj','vivado_ip_prj','data','gsram3_32.coe');
+fname4 = fullfile('hdl_prj','vivado_ip_prj','data','gsram4_32.coe');
+fname5 = fullfile('hdl_prj','vivado_ip_prj','data','gsram5_32.coe');
 toload = fullfile('data','goldSeq_4k_2.mat');
 
 %% Load gold sequences and convert to fixed point (16 bits, 15 decimal bits)
@@ -46,20 +46,20 @@ fprintf(fid3, 'memory_initialization_vector=\n');
 fprintf(fid4, 'memory_initialization_vector=\n');
 fprintf(fid5, 'memory_initialization_vector=\n');
 
-for i = 1:64:4096    
+for i = 1:32:4096    
     str1 = '';
     str2 = '';
     str3 = '';
     str4 = '';
     str5 = '';
-    for j = i:i+63
+    for j = i:i+31
         str1 = [bin(gs1(j)) str1];
         str2 = [bin(gs2(j)) str2];
         str3 = [bin(gs3(j)) str3];
         str4 = [bin(gs4(j)) str4];
         str5 = [bin(gs5(j)) str5];
     end
-    if (i == 4033)
+    if (i == 4065)
         fprintf(fid1, [str1 ';']);
         fprintf(fid2, [str2 ';']);
         fprintf(fid3, [str3 ';']);

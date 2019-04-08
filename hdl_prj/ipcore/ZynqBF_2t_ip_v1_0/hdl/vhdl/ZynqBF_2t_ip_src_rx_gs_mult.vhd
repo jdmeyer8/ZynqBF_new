@@ -30,8 +30,8 @@ use UNIMACRO.vcomponents.all;
 
 ENTITY ZynqBF_2t_ip_src_rx_gs_mult IS
   GENERIC( N                              :   integer := 2;     -- number of channels
-           NDSP                           :   integer := 64;    -- number of DSPs to use for multiply-accumulate
-           NSUM                           :   integer := 8      -- log2 of NDSP
+           NDSP                           :   integer := 32;    -- number of DSPs to use for multiply-accumulate
+           NSUM                           :   integer := 4      -- log2 of NDSP
         );
   PORT( clk                               :   IN    std_logic;
         reset                             :   IN    std_logic;
@@ -40,8 +40,7 @@ ENTITY ZynqBF_2t_ip_src_rx_gs_mult IS
         en                                :   IN    std_logic;  -- enable for MACC
         rxi                               :   IN    vector_of_std_logic_vector16(0 to (NDSP-1));  -- rx i data for the correlators
         rxq                               :   IN    vector_of_std_logic_vector16(0 to (NDSP-1));  -- rx q data for the correlators
-        gsi                               :   IN    vector_of_std_logic_vector16(0 to (NDSP*N-1));  -- gs i data for the correlators
-        gsq                               :   IN    vector_of_std_logic_vector16(0 to (NDSP*N-1));  -- gs q data for the correlators
+        gs                                :   IN    vector_of_std_logic_vector16(0 to (NDSP*N-1));  -- gs i data for the correlators
         done                              :   OUT   std_logic;
         dout                              :   OUT   vector_of_std_logic_vector32(0 to (N-1))
         );
@@ -51,7 +50,7 @@ END ZynqBF_2t_ip_src_rx_gs_mult;
 ARCHITECTURE rtl OF ZynqBF_2t_ip_src_rx_gs_mult IS
 
   component ZynqBF_2t_ip_src_rx_gs_mult_core
-    generic( NDSP                           :   integer := 64;  -- number of DSPs to use for multiply-accumulate
+    generic( NDSP                           :   integer := 32;  -- number of DSPs to use for multiply-accumulate
              SCNT_END                       :   integer := 5    -- sum count end value
         );   
     port( clk                               :   IN    std_logic;
@@ -62,8 +61,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_rx_gs_mult IS
           scnt                              :   IN    std_logic_vector(15 downto 0);          -- sum counter
           rxi                               :   IN    vector_of_std_logic_vector16(0 TO (NDSP-1));  -- rx i data for the multipy-accumulator
           rxq                               :   IN    vector_of_std_logic_vector16(0 TO (NDSP-1));  -- rx q data for the multipy-accumulator
-          gsi                               :   IN    vector_of_std_logic_vector16(0 TO (NDSP-1));  -- gs i data for the multipy-accumulator
-          gsq                               :   IN    vector_of_std_logic_vector16(0 TO (NDSP-1));  -- gs q data for the multipy-accumulator
+          gs                                :   IN    vector_of_std_logic_vector16(0 TO (NDSP-1));  -- gs i data for the multipy-accumulator
           done                              :   OUT   std_logic;
           dout                              :   OUT   std_logic_vector(31 downto 0)
     );
@@ -122,8 +120,7 @@ BEGIN
             scnt => std_logic_vector(sum_cnt),
             rxi => rxi,
             rxq => rxq,
-            gsi => gsi((NDSP*i) to (NDSP*(i+1) - 1)),
-            gsq => gsq((NDSP*i) to (NDSP*(i+1) - 1)),
+            gs => gs((NDSP*i) to (NDSP*(i+1) - 1)),
             done => done_vec(i),
             dout => dout(i)
         );

@@ -22,6 +22,7 @@ USE work.ZynqBF_2t_ip_src_ZynqBF_2tx_fpga_pkg.ALL;
 
 ENTITY ZynqBF_2t_ip_src_correlators IS
   GENERIC(
+        NDSP                              :   integer := 32;
         NCORR                             :   integer := 2      -- number of correlators
         );
   PORT( clk                               :   IN    std_logic;
@@ -33,6 +34,8 @@ ENTITY ZynqBF_2t_ip_src_correlators IS
         vin                               :   IN    std_logic;                      -- rx ram write enable
         pd_en                             :   OUT   std_logic;
         est_en                            :   IN    std_logic;
+        fifo_empty                        :   IN    std_logic;
+        clear_fifo                        :   OUT   std_logic;
         index                             :   OUT   std_logic_vector(14 DOWNTO 0);  -- ufix15
         step                              :   OUT   std_logic;
         peak_found                        :   OUT   std_logic;
@@ -61,6 +64,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   END COMPONENT;
 
   component ZynqBF_2t_ip_src_rx_bram 
+  generic( NDSP                           :   integer := 32);
   port( clk                               :   IN    std_logic;
         reset                             :   IN    std_logic;
         enb                               :   IN    std_logic;
@@ -69,48 +73,50 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
         we                                :   IN    std_logic;
         wr_addr                           :   IN    std_logic_vector(14 DOWNTO 0);  -- ufix15
         rd_addr                           :   IN    std_logic_vector(14 DOWNTO 0);  -- ufix15
-        shift                             :   IN    std_logic_vector(5 DOWNTO 0);  -- ufix15
+        shift                             :   IN    std_logic_vector(4 DOWNTO 0);  -- ufix15
         dout_i_single                     :   OUT   std_logic_vector(15 downto 0);
         dout_q_single                     :   OUT   std_logic_vector(15 downto 0);
-        dout_i                            :   OUT   vector_of_std_logic_vector16(0 TO 63);  -- rx i data for the correlators
-        dout_q                            :   OUT   vector_of_std_logic_vector16(0 TO 63)   -- rx q data for the correlators
+        dout_i                            :   OUT   vector_of_std_logic_vector16(0 TO (NDSP-1));  -- rx i data for the correlators
+        dout_q                            :   OUT   vector_of_std_logic_vector16(0 TO (NDSP-1))   -- rx q data for the correlators
         );
   END COMPONENT;
   
   component ZynqBF_2t_ip_src_goldSeq
-  generic (N                              :   integer := 2);
+  generic ( NDSP                           :   integer := 32;
+            N                              :   integer := 2);
   port( clk                               :   IN    std_logic;
         reset                             :   IN    std_logic;
         enb                               :   IN    std_logic;
         -- addr                              :   IN    std_logic_vector(5 DOWNTO 0);
         -- addr_lsb                          :   IN    std_logic_vector(5 downto 0);
-        addr                              :   IN    vector_of_std_logic_vector6(0 to (N-1));
-        addr_lsb                          :   IN    vector_of_std_logic_vector6(0 to (N-1));
+        addr                              :   IN    vector_of_std_logic_vector7(0 to (N-1));
+        addr_lsb                          :   IN    vector_of_std_logic_vector5(0 to (N-1));
         gs_out_single                     :   OUT   vector_of_std_logic_vector16(0 to (N-1));
-        gs_out                            :   OUT   vector_of_std_logic_vector16(0 to (N*64 - 1))
+        gs_out                            :   OUT   vector_of_std_logic_vector16(0 to (N*NDSP - 1))
         );
   end component;
   
   component ZynqBF_2t_ip_src_shift_rx
+  generic( NDSP                           :   integer := 32);
   PORT( clk                               :   IN    std_logic;
         reset                             :   IN    std_logic;
-        u                                 :   IN    vector_of_std_logic_vector16(0 TO 63);  -- sfix16_En15 [64]
-        shift                             :   IN    std_logic_vector(5 DOWNTO 0);  -- ufix6
-        y                                 :   OUT   vector_of_std_logic_vector16(0 TO 63)  -- sfix16_En15 [64]
+        u                                 :   IN    vector_of_std_logic_vector16(0 TO (NDSP-1));  -- sfix16_En15 [64]
+        shift                             :   IN    std_logic_vector(4 DOWNTO 0);  -- ufix6
+        y                                 :   OUT   vector_of_std_logic_vector16(0 TO (NDSP-1))  -- sfix16_En15 [64]
         );
   END component;
   
   component ZynqBF_2t_ip_src_rx_gs_mult
-  generic( N                              :   integer := 2);
+  generic( NDSP                           :   integer := 32;
+           N                              :   integer := 2);
   port( clk                               :   IN    std_logic;
         reset                             :   IN    std_logic;
         enb                               :   IN    std_logic;
         start                             :   IN    std_logic;
         en                                :   IN    std_logic;  -- enable for MACC
-        rxi                               :   IN    vector_of_std_logic_vector16(0 TO 63);  -- rx i data for the correlators
-        rxq                               :   IN    vector_of_std_logic_vector16(0 TO 63);  -- rx q data for the correlators
-        gsi                               :   IN    vector_of_std_logic_vector16(0 TO (64*N-1));  -- gs i data for the correlators
-        gsq                               :   IN    vector_of_std_logic_vector16(0 TO (64*N-1));  -- gs q data for the correlators
+        rxi                               :   IN    vector_of_std_logic_vector16(0 TO (NDSP-1));  -- rx i data for the correlators
+        rxq                               :   IN    vector_of_std_logic_vector16(0 TO (NDSP-1));  -- rx q data for the correlators
+        gs                                :   IN    vector_of_std_logic_vector16(0 TO (N*NDSP-1));  -- gs i data for the correlators
         done                              :   OUT   std_logic;
         dout                              :   OUT   vector_of_std_logic_vector32(0 TO (N-1))
         );
@@ -122,14 +128,13 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
         enb                               :   IN    std_logic;
         rxi                               :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
         rxq                               :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
-        gsi                               :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
-        gsq                               :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
+        gs                                :   IN    std_logic_vector(15 downto 0);  -- sfix16_En15
         start                             :   IN    std_logic;
         en                                :   IN    std_logic;
         base_addr                         :   IN    std_logic_vector(14 downto 0);
         rx_addr                           :   IN    std_logic_vector(14 downto 0);
-        gs_addr_msb                       :   OUT   std_logic_vector(5 downto 0);
-        gs_addr_lsb                       :   OUT   std_logic_vector(5 downto 0);
+        gs_addr_msb                       :   OUT   std_logic_vector(6 downto 0);
+        gs_addr_lsb                       :   OUT   std_logic_vector(4 downto 0);
         ch_i                              :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
         ch_q                              :   OUT   std_logic_vector(31 DOWNTO 0);  -- sfix16_En15
         done                              :   OUT   std_logic
@@ -160,20 +165,18 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
     USE ENTITY work.ZynqBF_2t_ip_src_ch_est2(rtl);
 
   -- Signals  
-  signal rxi                              : vector_of_std_logic_vector16(0 to 63);
-  signal rxq                              : vector_of_std_logic_vector16(0 to 63);
-  signal gsdata                           : vector_of_std_logic_vector16(0 to (64*NCORR - 1));
-  signal gsi                              : vector_of_std_logic_vector16(0 to (64*NCORR - 1));
-  signal gsq                              : vector_of_std_logic_vector16(0 to (64*NCORR - 1));
-  signal rxi_shifted                      : vector_of_std_logic_vector16(0 to 63);
-  signal rxq_shifted                      : vector_of_std_logic_vector16(0 to 63);
+  signal rxi                              : vector_of_std_logic_vector16(0 to (NDSP-1));
+  signal rxq                              : vector_of_std_logic_vector16(0 to (NDSP-1));
+  signal gsdata                           : vector_of_std_logic_vector16(0 to (NDSP*NCORR - 1));
+  signal gs                               : vector_of_std_logic_vector16(0 to (NDSP*NCORR - 1));
+  signal rxi_shifted                      : vector_of_std_logic_vector16(0 to (NDSP-1));
+  signal rxq_shifted                      : vector_of_std_logic_vector16(0 to (NDSP-1));
   
   signal rx_ram_we                        : std_logic;
   signal rxi_single                       : std_logic_vector(15 downto 0);
   signal rxq_single                       : std_logic_vector(15 downto 0);
-  signal gsi_single                       : vector_of_std_logic_vector16(0 to (NCORR-1));
-  signal gsq_single                       : vector_of_std_logic_vector16(0 to (NCORR-1));
   signal gsdata_single                    : vector_of_std_logic_vector16(0 to (NCORR-1));
+  signal gs_single                        : vector_of_std_logic_vector16(0 to (NCORR-1));
   
   signal rx_sel                           : integer range 0 to 63;
   
@@ -189,18 +192,23 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   signal rx_ram_re                        : std_logic;
   signal rx_ram_wraddr                    : std_logic_vector(14 downto 0);
   signal rx_ram_rdaddr                    : std_logic_vector(14 downto 0);
-  signal rx_ram_shift                     : std_logic_vector(5 downto 0);
-  signal gs_ram_rdaddr_msb                : vector_of_std_logic_vector6(0 to (NCORR-1));
-  signal gs_ram_rdaddr_lsb                : vector_of_std_logic_vector6(0 to (NCORR-1));
+  signal rx_ram_shift                     : std_logic_vector(4 downto 0);
+  signal gs_ram_rdaddr_msb                : vector_of_std_logic_vector7(0 to (NCORR-1));
+  signal gs_ram_rdaddr_lsb                : vector_of_std_logic_vector5(0 to (NCORR-1));
   signal rx_in_addr                       : unsigned(14 downto 0);
-  signal shift_cnt                        : unsigned(5 downto 0);
+  signal shift_cnt                        : unsigned(4 downto 0);
   
   signal pd_rxaddr                        : std_logic_vector(14 downto 0);
-  signal pd_gsaddr                        : std_logic_vector(5 downto 0);
+  signal pd_gsaddr                        : std_logic_vector(6 downto 0);
   
+  signal pd_en_i                          : std_logic;
+  signal pd_en_dreg                       : unsigned(2 downto 0);
+  signal pd_en_d1                         : std_logic;
+  signal pd_en_d2                         : std_logic;
+  signal pd_en_d3                         : std_logic;
   signal pd_en_reg                        : unsigned(0 to (NCORR-1));
   
-  signal corr_shift                       : unsigned(5 downto 0);           -- latch value of shift_cnt at the start of the correlation
+  signal corr_shift                       : unsigned(4 downto 0);           -- latch value of shift_cnt at the start of the correlation
   signal corr_cnt                         : unsigned(11 downto 0);          -- correlation counter (and address for gs ram, address offset for rx ram)
   signal corr_base                        : unsigned(14 downto 0);          -- correlation base address for rx ram
 
@@ -226,7 +234,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   signal update_est_index                 : std_logic_vector(0 to (NCORR-1));
   
   signal corr_threshold                   : vector_of_std_logic_vector32(0 to (NCORR-1));
-  constant corr_thresh_const              : vector_of_std_logic_vector32(0 to (NCORR-1)) := (others => x"00250000");
+  constant corr_thresh_const              : vector_of_std_logic_vector32(0 to (NCORR-1)) := (others => x"01000000");
   
   signal cs_main                          : vector_of_std_logic_vector8(0 to (NCORR-1));    -- main FSM
   constant s_peakdetect                   : std_logic_vector(7 downto 0) := "00000001";
@@ -234,6 +242,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   constant s_channelest                   : std_logic_vector(7 downto 0) := "00000100";
   constant s_wait3                        : std_logic_vector(7 downto 0) := "00001000";
   constant s_reset                        : std_logic_vector(7 downto 0) := "00010000";
+  constant s_clearfifo                    : std_logic_vector(7 downto 0) := "00100000";
   
   signal ch_est_start                     : std_logic;
   signal ch_est_start_reg                 : unsigned(0 to (NCORR-1));
@@ -241,8 +250,8 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_correlators IS
   signal ch_est_en_reg                    : unsigned(0 to (NCORR-1));
   signal ch_est_done                      : unsigned(0 to (NCORR-1));
   signal ch_est_rxaddr                    : unsigned(14 downto 0);
-  signal ch_est_gsaddr_msb                : vector_of_std_logic_vector6(0 to (NCORR-1));
-  signal ch_est_gsaddr_lsb                : vector_of_std_logic_vector6(0 to (NCORR-1));
+  signal ch_est_gsaddr_msb                : vector_of_std_logic_vector7(0 to (NCORR-1));
+  signal ch_est_gsaddr_lsb                : vector_of_std_logic_vector5(0 to (NCORR-1));
   
   signal ch_est_index_start               : vector_of_std_logic_vector15(0 to (NCORR-1));
   signal ch_est_base_addr                 : std_logic_vector(14 downto 0);
@@ -276,17 +285,18 @@ BEGIN
   --rxi_single <= rxi(rx_sel);
   --rxq_single <= rxq(rx_sel);
   
-  corr_start <= vin_dreg(2) when ch_est_en_reg = to_unsigned(16#0#, NCORR) else '0';
-  inc_rx_ram_wraddr <= vin_dreg(2);
+  corr_start <= vin_dreg(2) when pd_en_dreg(2) = '1' else '0';
+  inc_rx_ram_wraddr <= vin_dreg(2) when pd_en_dreg(2) = '1' else '0';
   
 --  rx_ram_rdaddr <= std_logic_vector(corr_cnt + corr_base);
 --  gs_ram_rdaddr <= std_logic_vector(corr_cnt(11 downto 6));
   pd_rxaddr <= std_logic_vector(corr_cnt + corr_base);
-  pd_gsaddr <= std_logic_vector(corr_cnt(11 downto 6));
+  pd_gsaddr <= std_logic_vector(corr_cnt(11 downto 5));
   
-  pd_en <= '1' when ch_est_en = '0' else '0';
+  pd_en_i <= '1' when pd_en_reg = REG_MAX else '0';
+  pd_en <= pd_en_i;
   
-  rx_ram_we <= vin when ch_est_en_reg = to_unsigned(16#0#, NCORR) else '0';
+  rx_ram_we <= vin when pd_en_dreg(2) = '1' else '0';
   rx_ram_rdaddr <= std_logic_vector(ch_est_rxaddr) when ch_est_en = '1' else pd_rxaddr;
   rx_ram_shift <= std_logic_vector(shift_cnt) when ch_est_en = '1' else std_logic_vector(corr_shift);
   gs_ram_rdaddr_msb <= ch_est_gsaddr_msb when ch_est_en = '1' else (others => pd_gsaddr);
@@ -296,14 +306,16 @@ BEGIN
   ch_est_en <= '1' when ch_est_en_reg > to_unsigned(16#0#, NCORR) else '0';
   
   ch_update <= '1' when cs_main(0) = s_reset else '0';
+  clear_fifo <= '1' when cs_main(0) = s_clearfifo else '0';
 
   u_rx_bram : ZynqBF_2t_ip_src_rx_bram
+    GENERIC MAP( NDSP => NDSP)
     PORT MAP( clk => clk,
               reset => reset,
               enb => enb,
               din_i => din_i,
               din_q => din_q,
-              we => vin,
+              we => rx_ram_we,
               wr_addr => rx_ram_wraddr,
               rd_addr => rx_ram_rdaddr,
               shift => rx_ram_shift,
@@ -314,7 +326,8 @@ BEGIN
               );
               
   u_gs : ZynqBF_2t_ip_src_goldSeq
-    GENERIC MAP (N => NCORR)
+    GENERIC MAP ( NDSP => NDSP,
+                  N => NCORR)
     PORT MAP( clk => clk,
               reset => reset,
               enb => enb,
@@ -325,6 +338,7 @@ BEGIN
               );
               
   u_shift_rxi : ZynqBF_2t_ip_src_shift_rx
+    GENERIC MAP( NDSP => NDSP)
     PORT MAP( clk => clk,
               reset => reset,
               u => rxi,
@@ -333,6 +347,7 @@ BEGIN
               );
   
   u_shift_rxq : ZynqBF_2t_ip_src_shift_rx
+    GENERIC MAP( NDSP => NDSP)
     PORT MAP( clk => clk,
               reset => reset,
               u => rxq,
@@ -341,7 +356,8 @@ BEGIN
               );
   
   u_rx_gs_mult : ZynqBF_2t_ip_src_rx_gs_mult
-    GENERIC MAP ( N => NCORR)
+    GENERIC MAP ( NDSP => NDSP,
+                  N => NCORR)
     PORT MAP( clk => clk,
               reset => reset,
               enb => enb,
@@ -349,8 +365,7 @@ BEGIN
               en => corr_en_d3,
               rxi => rxi_shifted,
               rxq => rxq_shifted,
-              gsi => gsi,
-              gsq => gsq,
+              gs => gs,
               done => corr_done,
               dout => corr_dout
               );
@@ -375,8 +390,7 @@ BEGIN
                 enb => enb,
                 rxi => rxi_single,
                 rxq => rxq_single,
-                gsi => gsi_single(i),
-                gsq => gsq_single(i),
+                gs => gs_single(i),
                 start => ch_est_start,
                 en => ch_est_en,
                 base_addr => ch_est_index_start(i),
@@ -394,15 +408,11 @@ BEGIN
   begin
     if clk'event and clk = '1' then
         if reset = '1' then
-            gsi <= (others => (others => '0'));
-            gsq <= (others => (others => '0'));
-            gsi_single <= (others => (others => '0'));
-            gsq_single <= (others => (others => '0'));
+            gs <= (others => (others => '0'));
+            gs_single <= (others => (others => '0'));
         elsif enb = '1' then
-            gsi <= gsdata;
-            gsq <= gsdata;
-            gsi_single <= gsdata_single;
-            gsq_single <= gsdata_single;
+            gs <= gsdata;
+            gs_single <= gsdata_single;
         end if;
     end if;
   end process;
@@ -414,6 +424,17 @@ BEGIN
             vin_dreg <= "000";
         elsif enb = '1' then
             vin_dreg <= vin_dreg(1 downto 0) & vin;
+        end if;
+    end if;
+  end process;
+  
+  pd_en_delay_process : process(clk)
+  begin
+    if clk'event and clk = '1' then
+        if reset = '1' then
+            pd_en_dreg <= (others => '0');
+        else
+            pd_en_dreg <= pd_en_dreg(pd_en_dreg'high-1 downto 0) & pd_en_i;
         end if;
     end if;
   end process;
@@ -494,7 +515,7 @@ BEGIN
                 corr_base <= rx_in_addr;
             elsif corr_en = '1' then
                 corr_shift <= corr_shift;
-                corr_cnt <= corr_cnt + 64;  -- increment by the number of parallel DSPs for each correlator iteration
+                corr_cnt <= corr_cnt + (NDSP);  -- increment by the number of parallel DSPs for each correlator iteration
                 corr_base <= corr_base;
             else
                 corr_shift <= corr_shift;
@@ -512,7 +533,7 @@ BEGIN
             pd_en_reg <= (others => '0');
         elsif enb = '1' then
             for i in 0 to (NCORR-1) loop
-                if cs_main(i) = s_peakdetect then
+                if cs_main(i) = s_peakdetect or cs_main(i) = s_wait2 then
                     pd_en_reg(i) <= '1';
                 else
                     pd_en_reg(i) <= '0';
@@ -693,7 +714,13 @@ BEGIN
                             cs_main(i) <= s_reset;
                         end if;
                     when s_reset =>
-                        cs_main(i) <= s_peakdetect;
+                        cs_main(i) <= s_clearfifo;
+                    when s_clearfifo =>
+                        if fifo_empty = '1' then
+                            cs_main(i) <= s_peakdetect;
+                        else
+                            cs_main(i) <= s_clearfifo;
+                        end if;
                     when others =>
                         cs_main(i) <= s_peakdetect;
                 end case;

@@ -15,7 +15,9 @@ USE IEEE.numeric_std.ALL;
 PACKAGE ZynqBF_2t_ip_src_ZynqBF_2tx_fpga_pkg IS
   TYPE vector_of_std_logic_vector3 IS ARRAY (NATURAL RANGE <>) OF std_logic_vector(2 DOWNTO 0);
   TYPE vector_of_std_logic_vector4 IS ARRAY (NATURAL RANGE <>) OF std_logic_vector(3 DOWNTO 0);
+  TYPE vector_of_std_logic_vector5 IS ARRAY (NATURAL RANGE <>) OF std_logic_vector(4 DOWNTO 0);
   TYPE vector_of_std_logic_vector6 IS ARRAY (NATURAL RANGE <>) OF std_logic_vector(5 DOWNTO 0);
+  TYPE vector_of_std_logic_vector7 IS ARRAY (NATURAL RANGE <>) OF std_logic_vector(6 DOWNTO 0);
   TYPE vector_of_std_logic_vector8 IS ARRAY (NATURAL RANGE <>) OF std_logic_vector(7 DOWNTO 0);
   TYPE vector_of_std_logic_vector15 IS ARRAY (NATURAL RANGE <>) OF std_logic_vector(14 DOWNTO 0);
   TYPE vector_of_std_logic_vector16 IS ARRAY (NATURAL RANGE <>) OF std_logic_vector(15 DOWNTO 0);

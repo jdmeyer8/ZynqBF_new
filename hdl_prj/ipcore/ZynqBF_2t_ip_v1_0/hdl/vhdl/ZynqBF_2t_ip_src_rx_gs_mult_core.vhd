@@ -27,7 +27,7 @@ LIBRARY UNIMACRO;
 use UNIMACRO.vcomponents.all;
 
 ENTITY ZynqBF_2t_ip_src_rx_gs_mult_core IS
-  GENERIC( NDSP                           :   integer := 64;    -- number of DSPs to use for multiply-accumulate (real number will be 2x because I and Q)
+  GENERIC( NDSP                           :   integer := 32;    -- number of DSPs to use for multiply-accumulate (real number will be 2x because I and Q)
            SCNT_END                       :   integer := 7      -- sum count end value
         );   
   PORT( clk                               :   IN    std_logic;
@@ -38,8 +38,7 @@ ENTITY ZynqBF_2t_ip_src_rx_gs_mult_core IS
         scnt                              :   IN    std_logic_vector(15 downto 0);
         rxi                               :   IN    vector_of_std_logic_vector16(0 TO (NDSP-1));  -- rx i data for the multipy-accumulator
         rxq                               :   IN    vector_of_std_logic_vector16(0 TO (NDSP-1));  -- rx q data for the multipy-accumulator
-        gsi                               :   IN    vector_of_std_logic_vector16(0 TO (NDSP-1));  -- gs i data for the multipy-accumulator
-        gsq                               :   IN    vector_of_std_logic_vector16(0 TO (NDSP-1));  -- gs q data for the multipy-accumulator
+        gs                                :   IN    vector_of_std_logic_vector16(0 TO (NDSP-1));  -- gs i data for the multipy-accumulator
         done                              :   OUT   std_logic;
         dout                              :   OUT   std_logic_vector(31 downto 0)
        );
@@ -50,6 +49,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_rx_gs_mult_core IS
 
   -- Signals
   signal macc1_p:               vector_of_signed48(0 to (NDSP-1));
+  signal macc1_p_reg:           vector_of_signed48(0 to (NDSP-1));
   signal macc1_a:               vector_of_signed16(0 to (NDSP-1));
   signal macc1_b:               vector_of_signed16(0 to (NDSP-1));
   signal macc1_c:               vector_of_signed48(0 to (NDSP-1));
@@ -57,6 +57,7 @@ ARCHITECTURE rtl OF ZynqBF_2t_ip_src_rx_gs_mult_core IS
   signal macc1_sum:             signed(47 downto 0);
   
   signal macc2_p:               vector_of_signed48(0 to (NDSP-1));
+  signal macc2_p_reg:           vector_of_signed48(0 to (NDSP-1));
   signal macc2_a:               vector_of_signed16(0 to (NDSP-1));
   signal macc2_b:               vector_of_signed16(0 to (NDSP-1));
   signal macc2_c:               vector_of_signed48(0 to (NDSP-1));
@@ -120,9 +121,9 @@ BEGIN
         -- elsif enb = '1' then
             for i in 0 to (NDSP-1) loop
                 macc1_a(i) <= signed(rxi(i));
-                macc1_b(i) <= signed(gsi(i));
+                macc1_b(i) <= signed(gs(i));
                 macc2_a(i) <= signed(rxq(i));
-                macc2_b(i) <= signed(gsq(i));
+                macc2_b(i) <= signed(gs(i));
             end loop;
         end if;
     end if;
@@ -190,6 +191,20 @@ BEGIN
     end if;
   end process;
   
+  macc_p_registers : process(clk)
+  begin
+    if clk'event and clk = '1' then
+        if reset = '1' then
+            macc1_p_reg <= (others => (others => '0'));
+            macc2_p_reg <= (others => (others => '0'));
+        else
+            macc1_p_reg <= macc1_p;
+            macc2_p_reg <= macc2_p;
+        end if;
+    end if;
+  end process;
+    
+  
   sum_process : process(clk)
     variable sum_macc1_i : signed(47 downto 0);
     variable sum_macc2_i : signed(47 downto 0);
@@ -204,10 +219,10 @@ BEGIN
             if men_d2 = '1' then
                 macc1_sum <= (others => '0');
                 macc2_sum <= (others => '0');
-            elsif sen_d2 = '1' then
+            elsif sen_d3 = '1' then
                 for i in 0 to (NSUM-1) loop
-                    sum_macc1_i := sum_macc1_i + macc1_p(NSUM*scnt_i + i);
-                    sum_macc2_i := sum_macc2_i + macc2_p(NSUM*scnt_i + i);
+                    sum_macc1_i := sum_macc1_i + macc1_p_reg(NSUM*scnt_i + i);
+                    sum_macc2_i := sum_macc2_i + macc2_p_reg(NSUM*scnt_i + i);
                 end loop;
                 macc1_sum <= macc1_sum + sum_macc1_i;
                 macc2_sum <= macc2_sum + sum_macc2_i;
@@ -262,8 +277,8 @@ BEGIN
             dout2 <= x"00000000";
         elsif enb = '1' and unsigned(scnt_d3) >= to_unsigned(SCNT_END,16) then
             done_i <= '1';
-            dout1 <= macc1_sum(45 downto 14);
-            dout2 <= macc2_sum(45 downto 14);
+            dout1 <= abs(macc1_sum(45 downto 14) + macc2_sum(45 downto 14));
+            dout2 <= abs(macc1_sum(45 downto 14) - macc2_sum(45 downto 14));
         else
             done_i <= '0';
             dout1 <= dout1;
